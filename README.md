@@ -9,3 +9,10 @@ mark, trademark, manufacturer, or otherwise, does not constitute or imply their 
 favoring by the Department of Commerce. The Department of Commerce seal and logo, or the seal and logo of a
 DOC bureau, shall not be used in any manner to imply endorsement of any commercial product or activity by
 DOC or the United States Government.”
+
+
+This notebook is published at https://emily-a-roberts.github.io/EAD-ASEB-Ssolidissima-OA/
+
+The data for this project is located in the data folder.
+
+The notebook is published in the docs folder. 
