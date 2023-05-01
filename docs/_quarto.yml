@@ -3,19 +3,18 @@ project:
   output-dir: docs
   
 book: 
-  title: "EAD-ASEB-Ssolidissima"
+  title: "EAD-ASEB-Ssolidissima-OA"
   
   page-footer: 
     right: |
       Built with <a href="https://quarto.org/">Quarto</a>
       
       
-  repo-url: https://github.com/Emily-A-Roberts/EAD-ASEB-Ssolidissima
+  repo-url: https://github.com/Emily-A-Roberts/EAD-ASEB-Ssolidissima-OA
   repo-branch: main
   chapters: 
     - index.qmd
-      chapters: 
-        - transplant_growth_lengths_Sep_Dec22.qmd
+    - transplant_growth_lengths_Sep_Dec22.qmd
     #    - subtidal_growth_data.qmd
     #    - subtidal_model_optimization.qmd
     #- part: intertidal_experiment_model.qmd
