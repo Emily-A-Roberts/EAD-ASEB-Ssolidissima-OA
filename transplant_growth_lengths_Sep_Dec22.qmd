@@ -1,6 +1,6 @@
 ---
 title: "Surfclam_growth_Sep22_Dec22"
-format: pdf
+format: html
 editor: visual
 ---
 
@@ -19,8 +19,9 @@ theme_set(theme_bw())
 ```{r}
 #| label: setup2
 #| include: false
-setwd("~/Surfclam datasheets")
-growth <- read.csv("12.5.22.SURFCLAM.LENGTHS.FINAL_new_headings.csv", stringsAsFactors = F)
+#setwd("~/Surfclam datasheets")
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+growth <- read.csv(file = "12.5.22.SURFCLAM.LENGTHS.FINAL_new_headings.csv", stringsAsFactors = F)
 growth <- growth[growth$Buried_Dec=="N",]
 
 head(growth)
@@ -39,10 +40,7 @@ growth$AliveOrDead[!is.na(growth$Dead_lengths_mm)] <- "Dead"
 growth$AliveOrDead[!is.na(growth$L_mm)] <- "Alive"
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
-
 ```{r}
-#| label: setup2
 #| include: false
 ##------------------------------------------------------------
 ##          I still need to fill in any QC'ed data          --
@@ -115,7 +113,7 @@ AIC(mod_growth_full,M_int,M,M2)
 
 
 # Remove growth measurements that are <(-2)... There are none. 
-growth_dec[growth_dec$growth_height<0,]
+#growth_dec[growth_dec$growth_height<0,]
 #growth_dec <- growth_dec[growth_dec$growth_height>(-2),]
 
 ```
