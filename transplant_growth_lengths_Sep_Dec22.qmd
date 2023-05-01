@@ -4,16 +4,6 @@ format: pdf
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
-
-
 ```{r}
 #| label: setup1
 #| include: false
@@ -25,7 +15,6 @@ library("ggpubr")
 library("gridExtra")
 theme_set(theme_bw())
 ```
-
 
 ```{r}
 #| label: setup2
@@ -51,6 +40,7 @@ growth$AliveOrDead[!is.na(growth$L_mm)] <- "Alive"
 ```
 
 The `echo: false` option disables the printing of code (only output is displayed).
+
 ```{r}
 #| label: setup2
 #| include: false
@@ -218,4 +208,3 @@ Alive <- as.data.frame(Alive_count[Alive_count$AliveOrDead=="Alive",])
 Alive$perc_alive <- Alive$n/9*100
 Alive
 ```
-
