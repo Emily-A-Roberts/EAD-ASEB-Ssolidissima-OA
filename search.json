@@ -2,14 +2,14 @@
   {
     "objectID": "index.html#welcome",
     "href": "index.html#welcome",
-    "title": "EAD-ASEB-Ssolidissima",
+    "title": "EAD-ASEB-Ssolidissima-OA",
     "section": "0.1 Welcome",
     "text": "0.1 Welcome\nThis is the Atlantic surfclam project."
   },
   {
     "objectID": "index.html#quarto-information",
     "href": "index.html#quarto-information",
-    "title": "EAD-ASEB-Ssolidissima",
+    "title": "EAD-ASEB-Ssolidissima-OA",
     "section": "0.2 Quarto information",
     "text": "0.2 Quarto information\nThis project uses quarto. Quarto is similar to Rmarkdown and enables you to weave together content and executable code into a finished document. To learn more about Quarto see https://quarto.org.\nWhen you click the Render button a document will be generated that includes both content and the output of embedded code."
   },
