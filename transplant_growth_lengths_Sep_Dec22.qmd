@@ -13,6 +13,7 @@ library("MuMIn")
 library("dplyr")
 library("ggpubr")
 library("gridExtra")
+library(lme4)
 theme_set(theme_bw())
 ```
 
@@ -61,10 +62,15 @@ growth$height_per_day <- growth$height_tot/growth$Elapsed_days
 mean(growth$len_tot)
 mean(growth$len_per_day)
 
-plot(growth$Start_len_mm, growth$len_tot)
 #growth[growth$len_tot<=0,"Len"]<- NA 
 
+```
+
+Plot total change in length as a function of starting length
+
+```{r}
 par(mfrow = c(1,1))
+plot(growth$Start_len_mm, growth$len_tot)
 ```
 
 ```{r}
@@ -74,8 +80,7 @@ par(mfrow = c(1,1))
 
 growth_dec <- growth[growth$Collection.month=="December",]
 
-head(growth_dec)
-str(growth_dec)
+
 growth_dec$Site <- as.factor(growth_dec$Site)
 growth_dec$Treatment <- as.factor(growth_dec$Treatment)
 growth_dec$AliveOrDead <- as.factor(growth_dec$AliveOrDead)
@@ -176,7 +181,6 @@ mod_growth_full <- lme(n~Treatment*Site,
                        random = ~1|Location_code, data = Alive_count)
 summary(mod_growth_full) # Not really answering my question but not differences in survival between treatments
 
-library(lme4)
 growth_dec$AliveOrDead
 (gm1 <- glmer(AliveOrDead ~ Treatment *Site + (1 | Location_code),
               data = growth_dec, family = binomial))
