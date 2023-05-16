@@ -1,8 +1,14 @@
-# pH HOBO data
+---
+title: "pH_HOBO_plots"
+author: "Emily Roberts"
+format: html
+editor: visual
+---
 
-# Next steps - need to upload more tide data and temp data from other sources and compare.
-# Also need to include the last couple days of June tide data. 
+## Set up workspace
 
+```{r}
+#| include: FALSE
 library(ggplot2)
 library(ggpubr)
 library(dplyr)
@@ -15,33 +21,46 @@ data_combined_new <- data.frame(
   pH = NA
 )
 
-
 # working directories
-wdDen <- "~/Documents/School and jobs/Milford/Surfclam OA/Environmental conditions/HOBOpHdata/Dennis"
-wdPtown <- "~/Documents/School and jobs/Milford/Surfclam OA/Environmental conditions/HOBOpHdata/Ptown"
-wdEel <- "~/Documents/School and jobs/Milford/Surfclam OA/Environmental conditions/HOBOpHdata/Eel_pond"
+wdDen <- "~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/data/HOBOpHdata/Dennis"
+wdPtown <- "~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/data/HOBOpHdata/Ptown"
+wdEel <- "~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/data/HOBOpHdata/Eel_Pond"
+```
 
+### Dennis
 
-# Dennis
+```{r}
 setwd(wdDen)
 filenames <- dir()
 filenames
+```
 
-# May to June # Bad data, before start of other loggers
-# (open_file <- filenames[5]) 
-# open_file <- "E Dennis 2022-06-13 08_04_00 EDT (Data EDT).csv"
-# df <- read.csv(open_file, stringsAsFactors = F)
-# df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
-# plot(df$datetime, df$Ch..3...pH....pH.)
-# df <- df[df$datetime>"2022-05-25 00:00:00 EDT",]
-# df <- df[df$datetime<"2022-06-07 00:00:00 EDT",]
-# plot(df$datetime, df$Ch..3...pH....pH., type = "l")
-# plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
-# plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
-
-
+```{r}
 # Late June to early Aug
-(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+#(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+open_file <- "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+#Also works: (open_file <- filenames[2]) # "1230_East_Dennis 2022-09-21 09_29_48 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime<"2022-08-04 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+data_combined_new <- data.frame(
+  Site = rep("Den",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.
+)
+
+data_combined <- rbind(data_combined_new)
+```
+
+```{r}
+# Late June to early Aug
+#(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
 open_file <- "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
 #Also works: (open_file <- filenames[2]) # "1230_East_Dennis 2022-09-21 09_29_48 EDT (Data EDT).csv"
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -61,11 +80,13 @@ data_combined_new <- data.frame(
 
 data_combined <- rbind(data_combined_new)
 
+```
 
+```{r}
 # Aug to mid September
 #"Den_077 2022-09-14 14_08_26 EDT (Data EDT).csv" 
 #"Den_077 2022-09-21 09_28_37 EDT (Data EDT)(1).csv" is the same file read out later on
-(open_file <- filenames[3])
+#(open_file <- filenames[3])
 open_file <- "Den_077 2022-09-14 14_08_26 EDT (Data EDT).csv" 
 df <- read.csv(open_file, stringsAsFactors = F)
 df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
@@ -88,13 +109,17 @@ data_combined <- rbind(data_combined,data_combined_new)
 head(data_combined_new)
 tail(data_combined_new)
 
+```
 
+### Ptown
 
-#Ptown
+```{r}
 setwd(wdPtown)
 filenames <- dir()
 filenames
+```
 
+```{r}
 # mid June to August
 (open_file <- filenames[2])
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -115,6 +140,9 @@ data_combined_new <- data.frame(
 
 data_combined <- rbind(data_combined,data_combined_new)
 
+```
+
+```{r}
 # August
 (open_file <- filenames[6])
 open_file <- "Ptown_075 2022-08-29 21_52_54 EDT (Data EDT).csv"
@@ -138,6 +166,9 @@ data_combined_new <- data.frame(
 
 data_combined <- rbind(data_combined,data_combined_new)
 
+```
+
+```{r}
 # September
 open_file <- "Ptown_20573560_Ptown 2022-09-29 17_27_52 EDT (Data EDT).csv"
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -160,7 +191,9 @@ data_combined_new <- data.frame(
 
 data_combined <- rbind(data_combined,data_combined_new)
 
+```
 
+```{r}
 # October
 # This sensor seems to be deployed at Eel pond originally, recalibrated without a change in the name, 
 # and then moved to Ptown. The segment at Ptown starts late in the day on 9/27/22
@@ -188,6 +221,9 @@ data_combined_new <- data.frame(
 
 data_combined <- rbind(data_combined,data_combined_new)
 
+```
+
+```{r}
 # November
 
 open_file <- "Ptown_076 2022-12-05 21_20_00 EST (Data EST).csv"
@@ -211,13 +247,18 @@ data_combined_new <- data.frame(
 
 data_combined <- rbind(data_combined,data_combined_new)
 
+```
 
-# Eel
+### Eel Pond
+
+```{r}
 setwd(wdEel)
 filenames <- dir()
+```
 
+```{r}
 #mid June to Aug
-(open_file <- filenames[2])
+#(open_file <- filenames[2])
 (open_file <- "21333340_Eel_Pond 2022-08-05 17_43_02 EDT (Data EDT).csv")
 df <- read.csv(open_file, stringsAsFactors = F)
 df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
@@ -240,6 +281,9 @@ data_combined <- rbind(data_combined,data_combined_new)
 # needs to be retrieved.
 # There was an issue with the tool when swapping them out
 
+```
+
+```{r}
 #Aug to lateAug
 (open_file <- filenames[4])
 (open_file <- "Eel_076 2022-09-27 13_35_57 EDT (Data EDT).csv")
@@ -289,7 +333,9 @@ data_combined <- rbind(data_combined,data_combined_new)
 # 
 # data_combined <- rbind(data_combined,data_combined_new)
 
+```
 
+```{r}
 # #October???
 # #October is not clear.
 # #If the other legger was still logging and deployed at this site
@@ -372,9 +418,11 @@ data_combined_new <- data.frame(
 data_combined <- rbind(data_combined,data_combined_new)
 
 
+```
 
+```{r}
 # November
-(open_file <- filenames[3])
+#(open_file <- filenames[3])
 open_file <- "20573560_Ptown 2022-12-05 16_55_15 EST (Data EST)_actuallyEel.csv"
 
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -397,10 +445,11 @@ data_combined_new <- data.frame(
 data_combined <- rbind(data_combined,data_combined_new)
 
 
+```
 
+## Combine
 
-
-
+```{r}
 #plot(data_combined$Date, data_combined$pH, 
      #color = as.factor(data_combined$Site), pch = ".")
 
@@ -417,7 +466,11 @@ ggarrange(g1, g2)
 
 min(data_combined$Date)
 
+```
 
+### Plot tides
+
+```{r}
 # Plot tides
 setwd("~/Documents/School and jobs/Milford/Surfclam OA/Environmental conditions/Tides")
 dir()
@@ -452,7 +505,9 @@ head(data_combined)
 head(tides)
 joined_df <- left_join(x=data_combined, y=tides, by= c("Date","Site"))
 
+```
 
+```{r}
 # Plot tides --------------------------------------------------------------
 Ptown <- joined_df[joined_df$Site=="Ptown",]
 plot(Temp~Tideheight, pch =".",type ="b", data = Ptown)
@@ -486,10 +541,9 @@ plot(pH~Temp,  pch =".",type ="b", data = Eel)
 # The HOBO temp logger will probably help the most in figuring this out, 
 # it will help determine if there is some wind/tide-driven bad data or not due to sensor exposure. 
 
-# Aggregate data --------------------------------------------------------------
+```
 
-
-
+```{r}
 # Subset data --------------------------------------------------------------
 
 # all.data <- joined_df[joined_df$Site=="Ptown"&joined_df$Tideheight>0.4|
@@ -500,7 +554,9 @@ Ptown <- Ptown[Ptown$Tideheight>0.4,]
 Den <- Den[Den$Tideheight>0.5,]
 Eel <- Eel[Eel$Tideheight>0,]
 
+```
 
+```{r}
 # Aggregate data --------------------------------------------------------------
 
 Ptown.hr <- aggregate(Ptown[,c("pH","Temp")], 
@@ -522,6 +578,9 @@ all.data.hr <- data.frame(
 all.data.hr$Date<- as.POSIXct(all.data.hr$Date)
 head(all.data.hr)
 
+```
+
+```{r}
 # Plot        --------------------------------------------------------------
 
 # plot(all.data$Date, all.data$pH, 
@@ -579,29 +638,9 @@ gg2 <- ggplot(all.data.hr, aes(x=Date, y=Temp, colour = Site))+
 
 ggarrange(gg2, gg1, common.legend = TRUE, legend="bottom")
 #
+```
 
-#Hourly
-# head(all.data.hr)
-# str(all.data.hr)
-# 
-# gg1 <- ggplot(all.data.hr, aes(x=Date, y=pH, colour = Site))+
-#   geom_point(cex = 1) +
-#   ylim(7,8.75)+
-#   geom_point(data = sampling.pH, aes(x,y), color = "black", cex = 5)+
-#   scale_color_manual(values=colors) +
-#   guides(colour = guide_legend(override.aes = list(size=5)))
-# gg1
-# 
-# gg2 <- ggplot(all.data.hr, aes(x=Date, y=Temp, colour = Site))+
-#   geom_point(cex = 1) +
-#   ylim(14,32)+
-#   geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 5)+
-#   scale_color_manual(values=colors) +
-#   guides(colour = guide_legend(override.aes = list(size=5)))
-# gg2
-# 
-# ggarrange(gg1, gg2, common.legend = TRUE, legend="bottom")
-
+```{r}
 # Subset data - playing around --------------------------------------------------------------
 
 all.data <- joined_df[joined_df$Site=="Ptown"&joined_df$Tideheight>2|
@@ -627,9 +666,9 @@ ggarrange(g1, g2)
 
 min(data_combined$Date)
 
+```
 
-
-
+```{r}
 # I need to add all of the tide data so I can subset the data using tide data
 
 
@@ -641,3 +680,4 @@ min(data_combined$Date)
 # Note I'm using the Hyannis dataset because they have down to 1min predictions. Falmouth does not.
 # Compared to Eel Pond Entrance on Willy Weather, Hyannis is ~30 min behind - which is perfect. The tide in Eel pond seems to be ~1/2 hour after 
 # Willy Weather says it is. 
+```
