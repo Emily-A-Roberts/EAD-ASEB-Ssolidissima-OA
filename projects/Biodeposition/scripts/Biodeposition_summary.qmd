@@ -17,7 +17,7 @@ When you click the **Render** button a document will be generated that includes 
 library(ggplot2)
 library(ggpubr)
 library(data.table)
-setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
 
 bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
 ```

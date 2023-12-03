@@ -11,7 +11,7 @@ library(ggplot2)
 library(ggpubr)
 library(nlme)
 library(data.table)
-setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
 
 bd_Pousse <- read.csv("Pousse_Meseck_Raw Data Surfclam Biodeposition.csv", stringsAsFactors = FALSE, header = TRUE)
 
