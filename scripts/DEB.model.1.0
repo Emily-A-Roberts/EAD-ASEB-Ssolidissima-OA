@@ -1,0 +1,77 @@
+---
+title: "DEB.Model.1.0"
+editor: visual
+---
+
+### DEB code developed Summer 2018
+
+Code DEB 3 state variables Emilien Pousse
+
+DEB with pCO2 effect
+
+### Load packages, access files and DEB parameters
+
+```{r}
+library(R.matlab)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data/DEB_model_data")
+ParaMat=readMat("results_Ensis_directus.mat")
+
+```
+
+##### Initialize *Spisula solidissima* parameters
+
+```{r}
+Param <- list()
+
+Param$GammaL1=0.8
+Param$GammaL2=0.8
+Param$v= 	  	0.05063
+Param$Kappa=0.8605
+Param$Pm=13.48
+Param$Eg= 	 2361
+Param$Shape= 	0.445
+Param$s_M= 	 	 	 	7.49598
+Param$Pxm=  	30.6986/0.8
+Param$Em=Param$Pxm*Param$KappaX/Param$v
+```
+
+##### Initialize *Spisula solidissima* pH parameters
+
+```{r}
+Param$del_pH=0.01
+```
+
+##### Set RCP scenario info
+
+```{r}
+#for (Sc in 1:5){
+#  Sc <- 1
+#  if(Sc==1){ScRCP=2.6}
+#  if(Sc==2){ScRCP=4.5}
+#  if(Sc==3){ScRCP=6}
+#  if(Sc==4){ScRCP=8.5}
+#if(Sc==5){ScRCP=10}
+
+#For now, just pick a scenario to run.
+ScRCP=2.6
+```
+
+##### Chose the date when you want the model to start
+
+This will set different temperature and pCO2 forcing variables
+
+```{r}
+Oyster='now'# now; 2045; 2070; 2095
+Zone="MAB" # MAB; MABmes; GB ### here you can chose if you want to use forcing variables from the Mid atlantic Bight or Georges Bank
+#ScRCP=8.5#"Validation"#;4.5#2.6; 4.5; 6; 8.5; Validation
+#ScRCP=2.6
+```
+
+### Files for forcing variables
+
+```{r}
+dir2 <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/data/DEB_model_data"
+Rechauf=read.csv(paste(dir2,sep="","Temp_data_for_Emilien (copie).csv"))
+,header=T,sep=",") # This is a file with the different projected temperature increase and pCO2 as a function of the RCP scenarios
+
+```

@@ -19,7 +19,7 @@ theme_set(theme_bw())
 
 ```{r}
 #| label: setup2
-#| include: false
+
 #setwd("~/Surfclam datasheets")
 setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
 growth <- read.csv(file = "12.5.22.SURFCLAM.LENGTHS.FINAL_new_headings.csv", stringsAsFactors = F)
@@ -42,7 +42,7 @@ growth$AliveOrDead[!is.na(growth$L_mm)] <- "Alive"
 ```
 
 ```{r}
-#| include: false
+
 ##------------------------------------------------------------
 ##          I still need to fill in any QC'ed data          --
 ##              with the ratio of length to height          --
@@ -173,6 +173,26 @@ summary(M2)
 E/P
 (P-E)/E
 P/E
+
+summary <- growth_dec %>%
+  group_by(Site) %>%
+  summarize(mean_len = mean(len_tot, na.rm = TRUE),
+            sd_len = sd(len_tot, na.rm = TRUE))
+
+
+
+gg2 <- ggplot(data = summary, aes(x=Site, y=mean_len))+
+  geom_bar()
+
+
+barplot(growth_dec$len_per_day~site)
+
++
+  xlab("Site") + 
+  #scale_color_discrete(name="Shell hash addition")+
+gg2
+
+
 ```
 
 ```{r}
@@ -209,4 +229,8 @@ summary(gm1)
 Alive <- as.data.frame(Alive_count[Alive_count$AliveOrDead=="Alive",])
 Alive$perc_alive <- Alive$n/9*100
 Alive
+```
+
+```{r}
+
 ```

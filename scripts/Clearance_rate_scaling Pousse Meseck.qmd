@@ -1,0 +1,45 @@
+---
+title: "CR scaling_Pousse_Meseck"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(nlme)
+library(data.table)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+
+
+
+bd_Pousse <- read.csv("Pousse_Meseck_Summarized_data.csv", stringsAsFactors = FALSE, header = TRUE)
+
+bd_Pousse$Treatment <- as.factor(bd_Pousse$pH)
+
+bd_Pousse$Treatment <- as.factor(bd_Pousse$pH)
+bd_Pousse$Date <- as.Date(bd_Pousse$Date, format = "%m/%d/%Y")
+bd_Pousse$Date[bd_Pousse$Date=="2019-06-12"] <-"2019-06-11"
+bd_Pousse$Month <- as.factor(bd_Pousse$Date)
+
+bd_Pousse$
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm., y=Dry.weight..mg., color = Treatment))+ geom_point()
+  gg1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

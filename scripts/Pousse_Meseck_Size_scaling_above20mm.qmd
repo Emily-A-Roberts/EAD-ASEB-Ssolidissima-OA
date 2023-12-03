@@ -1,0 +1,519 @@
+---
+title: "Biodeposition_size_scaling"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(data.table)
+library(nlme)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+
+bd_Pousse <- read.csv("Pousse_Meseck_Raw Data Surfclam Biodeposition.csv", stringsAsFactors = FALSE, header = TRUE)
+
+
+bd_Pousse$Dry.weight..mg. <- bd_Pousse$DW_corr
+
+str(bd_Pousse)
+
+bd_Pousse$Treatment <- as.factor(bd_Pousse$pH)
+bd_Pousse$Date <- as.Date(bd_Pousse$Date, format = "%m/%d/%Y")
+bd_Pousse$Date[bd_Pousse$Date=="2019-06-12"] <-"2019-06-11"
+bd_Pousse$Month <- as.factor(bd_Pousse$Date)
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=bd_Pousse$Date, y=Length..mm., color = Treatment))+ geom_point()
+  gg1
+
+bd_Pousse$OER[bd_Pousse$OER<=-.5]<-NA
+bd_Pousse$IER[bd_Pousse$IER<=-.5]<-NA
+#bd_Pousse$Dry.weight..mg.[bd_Pousse$Dry.weight..mg.>=.5]<-NA I added a QC step to the google slides sheet to correct the weight of 4 individuals that did not match their lengths. 
+
+#Only include animals above 20mm
+bd_Pousse <- bd_Pousse[bd_Pousse$Length..mm.>=20,]
+
+# There were two dry weight values I didn't trust so I estimated them from the length based on the rest of the dataset. 
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm., y=Dry.weight..mg., color = Treatment))+ geom_point()
+  gg1
+
+bd_Pousse <-  bd_Pousse[bd_Pousse$Treatment=="8"|bd_Pousse$Treatment=="7.5",]
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm., y=Dry.weight..mg., color = Treatment))+ geom_point()
+  gg1
+
+
+#Only include 6/1/2019 onwards because earlier than this most clams were below the 0.1mg DW cutoff
+cutoff <- as.Date("6/01/2019", format = "%m/%d/%Y")
+bd_Pousse <- bd_Pousse[bd_Pousse$Date>=cutoff,]
+
+
+  
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm., y=Dry.weight..mg., color = Treatment))+ geom_point()
+  gg1
+
+
+  
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm., y=Dry.weight..mg., color = Month))+ geom_point()
+  gg1
+  
+
+
+
+  
+```
+
+You can add options to executable code like this
+
+```{r}
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg., y=OER, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("OER")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 0.72)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(OER ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(OER ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+# nls_7 <- nls(OER ~ A * Dry.weight..mg.^B, 
+#                  start = list(A = 2.3, B = 0.72),
+#                  data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+#                  na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+# summary(nls_7)
+
+nls_all <- nls(OER ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+nls_all_exp_only <- nls(OER ~ Dry.weight..mg.^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all_exp_only)
+
+length(bd_Pousse$Length..mm.)
+length(bd_Pousse$Dry.weight..mg.)
+nls_all.len <- nls(OER ~ A * Length..mm.^B, 
+                 start = list(A = 1, B = 2),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+AIC(nls_all,nls_all_exp_only,nls_all.len)
+BIC(nls_all,nls_all_exp_only,nls_all.len)
+```
+
+```{r}
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg., y=IER, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("IER")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('IER as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 0.72)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(IER ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(IER ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+# nls_7 <- nls(IER ~ A * Dry.weight..mg.^B, 
+#                  start = list(A = 2.3, B = 0.72),
+#                  data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+#                  na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+# summary(nls_7)
+
+nls_all <- nls(IER ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+nls_all_exp_only <- nls(IER ~ Dry.weight..mg.^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all_exp_only)
+
+length(bd_Pousse$Length..mm.)
+length(bd_Pousse$Dry.weight..mg.)
+nls_all.len <- nls(IER ~ A * Length..mm.^B, 
+                 start = list(A = 1, B = 2),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+AIC(nls_all,nls_all_exp_only,nls_all.len)
+BIC(nls_all,nls_all_exp_only,nls_all.len)
+```
+
+```{r}
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg., y=ORR, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("ORR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('ORR as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 0.72)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(ORR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(ORR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+# nls_7 <- nls(ORR ~ A * Dry.weight..mg.^B, 
+#                  start = list(A = 2.3, B = 0.72),
+#                  data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+#                  na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+# summary(nls_7)
+
+nls_all <- nls(ORR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = -0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+
+nls_all_exp_only <- nls(ORR ~ Dry.weight..mg.^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all_exp_only)
+
+length(bd_Pousse$Length..mm.)
+length(bd_Pousse$Dry.weight..mg.)
+nls_all.len <- nls(ORR ~ A * Length..mm.^B, 
+                 start = list(A = 1, B = 2),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+AIC(nls_all,nls_all_exp_only,nls_all.len)
+BIC(nls_all,nls_all_exp_only,nls_all.len)
+```
+
+```{r}
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg., y=IRR, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("IRR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('IRR as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 0.72)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+# nls_7 <- nls(IRR ~ A * Dry.weight..mg.^B, 
+#                  start = list(A = 2.3, B = 0.72),
+#                  data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+#                  na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+# summary(nls_7)
+
+nls_all <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+nls_all_exp_only <- nls(IRR ~ Dry.weight..mg.^B, 
+                 start = list( B = -0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all_exp_only)
+
+length(bd_Pousse$Length..mm.)
+length(bd_Pousse$Dry.weight..mg.)
+nls_all.len <- nls(IRR ~ A * Length..mm.^B, 
+                 start = list(A = 1, B = 2),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+AIC(nls_all,nls_all_exp_only,nls_all.len)
+BIC(nls_all,nls_all_exp_only,nls_all.len)
+```
+
+The following stats suggests that at least for this dataset, calculating the same coefficient and exponent for all data, rather than individually by group, gives the best fit. Theoretically we think that the exponent is conserved, and that the scaling factor can be allowed to vary. The AIC does not indicate a significant difference between the two methods (del AIC = 3) for any of the following combinations, so there is no reason to think the exponent is not conserved.
+
+```{r}
+
+fit1 <- nlme::gnls(OER~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=1, B = .7 ))
+
+fit2 <- nlme::gnls(OER~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=.7, B = c(1,1) ))
+
+fit3 <- nlme::gnls(OER~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+
+fit4 <- nlme::gnls(OER~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = c(1,1) ))
+AIC(fit1,fit2,fit3,fit4)
+BIC(fit1,fit2,fit3,fit4)
+summary(fit1)
+summary(fit3)
+```
+
+```{r}
+fit1 <- nlme::gnls(IER~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=1, B = .7 ))
+
+fit2 <- nlme::gnls(IER~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=.7, B = c(1,1) ))
+
+fit3 <- nlme::gnls(IER~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+
+fit4 <- nlme::gnls(IER~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = c(1,1) ))
+AIC(fit1,fit2,fit3,fit4)
+BIC(fit1,fit2,fit3,fit4)
+summary(fit1)
+summary(fit3)
+```
+
+```{r}
+fit1 <- nlme::gnls(ORR~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=1, B = .7 ))
+
+fit2 <- nlme::gnls(ORR~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=.7, B = c(1,1) ))
+
+fit3 <- nlme::gnls(ORR~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+
+fit4 <- nlme::gnls(ORR~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = c(1,1) ))
+AIC(fit1,fit2,fit3,fit4) 
+BIC(fit1,fit2,fit3,fit4)
+summary(fit1)
+summary(fit4)
+summary(fit3)
+```
+
+```{r}
+fit1 <- nlme::gnls(IRR~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=1, B = .7 ))
+
+fit2 <- nlme::gnls(IRR~ A*Dry.weight..mg.^B,
+           params = list(A~1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=.7, B = c(1,1) ))
+
+fit3 <- nlme::gnls(IRR~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+
+fit4 <- nlme::gnls(IRR~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = c(1,1) ))
+AIC(fit1,fit2,fit3,fit4) 
+BIC(fit1,fit2,fit3,fit4)
+summary(fit1)
+summary(fit3)
+```
+
+Summary of fits used:
+
+```{r}
+
+fit_OER <- nlme::gnls(OER~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+fit_IER <- nlme::gnls(IER~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+fit_ORR <- nlme::gnls(ORR~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+fit_IRR <- nlme::gnls(IRR~ A*Dry.weight..mg.^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .7 ))
+
+summary(fit_OER)
+summary(fit_IER)
+summary(fit_ORR)
+summary(fit_IRR)
+```
+
+Now I'm trying to add Month as a random effect
+
+```{r}
+#str(bd_Pousse)
+
+```
+
+```{r}
+fit1 <- nlme::gnls(OER~ A*(Length..mm./10)^B,
+           params = list(A~Treatment-1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = .3 ))
+summary(fit1)
+
+fit2 <- nlme::gnls(OER~ A*(Length..mm./10)^B,
+           params = list(A~Treatment-1, B~Treatment-1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=c(1,1), B = c(.3,.3) ))
+summary(fit2)
+
+fit3 <- nlme::gnls(OER~ A*(Length..mm./10)^B,
+           params = list(A~1, B~1), 
+           data=bd_Pousse,
+           na.action = na.exclude,
+           start = list(A=1, B = .3 ))
+summary(fit3)
+AIC(fit1,fit2,fit3)
+BIC(fit1,fit2,fit3)
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm./10, y=OER, color = Treatment))+
+  geom_point()+
+  #xlab("Dry weight") + 
+  #ylab("ORR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('ORR as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 2)),
+    se = FALSE
+  ) 
+#+
+  #facet_wrap(~ Treatment)
+
+gg1
+```
+
+Ultimately the ORR and IRR scaling factors are NS for this dataset.

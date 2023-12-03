@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.340">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Biodeposition_size_scaling</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Pousse_Meseck_Size_scaling_exp_only_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Pousse_Meseck_Size_scaling_exp_only_files/libs/quarto-html/quarto.js"></script>
+<script src="Pousse_Meseck_Size_scaling_exp_only_files/libs/quarto-html/popper.min.js"></script>
+<script src="Pousse_Meseck_Size_scaling_exp_only_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Pousse_Meseck_Size_scaling_exp_only_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Pousse_Meseck_Size_scaling_exp_only_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Pousse_Meseck_Size_scaling_exp_only_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Pousse_Meseck_Size_scaling_exp_only_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Pousse_Meseck_Size_scaling_exp_only_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Pousse_Meseck_Size_scaling_exp_only_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Biodeposition_size_scaling</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="quarto" class="level2">
+<h2 class="anchored" data-anchor-id="quarto">Quarto</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggpubr)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'data.table' was built under R version 4.3.2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(<span class="st">"~/GitHub/EAD-ASEB-Ssolidissima-OA/data"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>bd_Pousse <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"Pousse_Meseck_Raw Data Surfclam Biodeposition.csv"</span>, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>, <span class="at">header =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(bd_Pousse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   112 obs. of  27 variables:
+ $ Date           : chr  "5/15/2019" "5/15/2019" "5/15/2019" "5/15/2019" ...
+ $ pH             : num  8 8 8 8 8 8 8 7.5 7.5 7.5 ...
+ $ Length..mm.    : num  16.5 16.2 17.3 17.9 16.8 ...
+ $ Dry.weight..mg.: num  0.0402 0.0503 0.0648 0.0819 0.049 0.0717 0.07 0.0802 0.0634 0.09 ...
+ $ time.h.        : num  1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 1.5 ...
+ $ X              : logi  NA NA NA NA NA NA ...
+ $ X.1            : logi  NA NA NA NA NA NA ...
+ $ feces          : int  2 3 4 5 6 7 8 2 3 4 ...
+ $ TPM            : num  1.86 3.79 2.65 1.88 3.46 ...
+ $ PIM            : num  1.56 3.31 2.25 1.54 3.03 ...
+ $ POM            : num  0.303 0.48 0.395 0.335 0.431 0.245 0.128 0.367 0.31 0.376 ...
+ $ X..organic     : num  16.3 12.7 14.9 17.8 12.4 ...
+ $ ER..mg.h.      : num  1.24 2.53 1.77 1.25 2.31 ...
+ $ OER            : num  0.202 0.32 0.263 0.223 0.287 ...
+ $ IER            : num  1.04 2.21 1.5 1.03 2.02 ...
+ $ X.2            : logi  NA NA NA NA NA NA ...
+ $ pseudofeces    : int  2 3 4 5 6 7 8 2 3 4 ...
+ $ TPM.1          : num  2.91 2.5 2.58 3.3 2.05 ...
+ $ PIM.1          : num  1.64 2.18 2.2 2.87 1.78 ...
+ $ POM.1          : num  1.269 0.313 0.389 0.429 0.272 ...
+ $ X..organ       : num  43.6 12.5 15 13 13.3 ...
+ $ RR..mg.h.      : num  1.94 1.66 1.72 2.2 1.37 ...
+ $ ORR            : num  0.846 0.209 0.259 0.286 0.181 ...
+ $ IRR            : num  1.09 1.46 1.46 1.92 1.19 ...
+ $ TSM            : num  15.8 15.8 15.8 15.8 15.8 ...
+ $ PIM.2          : num  13.4 13.4 13.4 13.4 13.4 ...
+ $ POM.2          : num  2.38 2.38 2.38 2.38 2.38 ...</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>bd_Pousse<span class="sc">$</span>Treatment <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(bd_Pousse<span class="sc">$</span>pH)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>bd_Pousse<span class="sc">$</span>OER[bd_Pousse<span class="sc">$</span>OER<span class="sc">&lt;=-</span>.<span class="dv">5</span>]<span class="ot">&lt;-</span><span class="cn">NA</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>bd_Pousse<span class="sc">$</span>IER[bd_Pousse<span class="sc">$</span>IER<span class="sc">&lt;=-</span>.<span class="dv">5</span>]<span class="ot">&lt;-</span><span class="cn">NA</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>ambient <span class="ot">&lt;-</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="dv">8</span>,]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>You can add options to executable code like this</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>gg1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> bd_Pousse, <span class="fu">aes</span>(<span class="at">x=</span>Dry.weight..mg., <span class="at">y=</span>OER, <span class="at">color =</span> Treatment))<span class="sc">+</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>()<span class="sc">+</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Dry weight"</span>) <span class="sc">+</span> </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"OER"</span>)<span class="sc">+</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ylim(0,9)+</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#scale_color_discrete(name="Site")+</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ggtitle ('OER as a function of DW')+</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">'nls'</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">formula =</span> y <span class="sc">~</span> x<span class="sc">^</span>B,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">method.args =</span> <span class="fu">list</span>(<span class="at">start =</span> <span class="fu">c</span>( <span class="at">B =</span> <span class="fl">0.72</span>)),</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  )<span class="co">#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">#            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> Treatment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;ggproto object: Class FacetWrap, Facet, gg&gt;
+    compute_layout: function
+    draw_back: function
+    draw_front: function
+    draw_labels: function
+    draw_panels: function
+    finish_data: function
+    init_scales: function
+    map_data: function
+    params: list
+    setup_data: function
+    setup_params: function
+    shrink: TRUE
+    train_scales: function
+    vars: function
+    super:  &lt;ggproto object: Class FacetWrap, Facet, gg&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>gg1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 5 rows containing non-finite values (`stat_smooth()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 5 rows containing missing values (`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Pousse_Meseck_Size_scaling_exp_only_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>nls_8 <span class="ot">&lt;-</span> <span class="fu">nls</span>(OER <span class="sc">~</span>  Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"8"</span>,], </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>nls_7<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">nls</span>(OER <span class="sc">~</span>  Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7.5"</span>,], </span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>nls_7 <span class="ot">&lt;-</span> <span class="fu">nls</span>(OER <span class="sc">~</span>  Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7"</span>,], </span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: OER ~ Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+B  0.28298    0.04689   6.035 5.63e-07 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.3176 on 37 degrees of freedom
+
+Number of iterations to convergence: 6 
+Achieved convergence tolerance: 9.412e-07
+  (4 observations deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7<span class="fl">.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: OER ~ Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+B  0.33970    0.04571   7.431 1.28e-08 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.2585 on 34 degrees of freedom
+
+Number of iterations to convergence: 4 
+Achieved convergence tolerance: 6.723e-06</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: OER ~ Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+B  0.40243    0.03338   12.05 1.23e-13 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.1734 on 33 degrees of freedom
+
+Number of iterations to convergence: 5 
+Achieved convergence tolerance: 3.178e-08
+  (1 observation deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>nls_all <span class="ot">&lt;-</span> <span class="fu">nls</span>(OER <span class="sc">~</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>( <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">group =</span> Treatment,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_all)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: OER ~ Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+B  0.33759    0.02545   13.26   &lt;2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.2617 on 106 degrees of freedom
+
+Number of iterations to convergence: 5 
+Achieved convergence tolerance: 3.276e-06
+  (5 observations deleted due to missingness)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>gg1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> bd_Pousse, <span class="fu">aes</span>(<span class="at">x=</span>Dry.weight..mg., <span class="at">y=</span>IER, <span class="at">color =</span> Treatment))<span class="sc">+</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>()<span class="sc">+</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Dry weight"</span>) <span class="sc">+</span> </span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"IER"</span>)<span class="sc">+</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ylim(0,9)+</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#scale_color_discrete(name="Site")+</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ggtitle ('IER as a function of DW')+</span></span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">'nls'</span>,</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">formula =</span> y <span class="sc">~</span> A <span class="sc">*</span> x<span class="sc">^</span>B,</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">method.args =</span> <span class="fu">list</span>(<span class="at">start =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>)),</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> <span class="cn">FALSE</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  )<span class="co">#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">#            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> Treatment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;ggproto object: Class FacetWrap, Facet, gg&gt;
+    compute_layout: function
+    draw_back: function
+    draw_front: function
+    draw_labels: function
+    draw_panels: function
+    finish_data: function
+    init_scales: function
+    map_data: function
+    params: list
+    setup_data: function
+    setup_params: function
+    shrink: TRUE
+    train_scales: function
+    vars: function
+    super:  &lt;ggproto object: Class FacetWrap, Facet, gg&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>gg1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 5 rows containing non-finite values (`stat_smooth()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 5 rows containing missing values (`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Pousse_Meseck_Size_scaling_exp_only_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>nls_8 <span class="ot">&lt;-</span> <span class="fu">nls</span>(IER <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"8"</span>,], </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>nls_7<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">nls</span>(IER <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7.5"</span>,], </span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>nls_7 <span class="ot">&lt;-</span> <span class="fu">nls</span>(IER <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7"</span>,], </span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IER ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+A  14.3955     3.8196   3.769 0.000588 ***
+B   0.7569     0.1657   4.569 5.56e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.725 on 36 degrees of freedom
+
+Number of iterations to convergence: 5 
+Achieved convergence tolerance: 4.534e-06
+  (4 observations deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7<span class="fl">.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IER ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+A   7.7153     1.8058   4.272 0.000154 ***
+B   0.4924     0.1440   3.419 0.001691 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.704 on 33 degrees of freedom
+
+Number of iterations to convergence: 7 
+Achieved convergence tolerance: 2.156e-06</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IER ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)  
+A   5.7753     2.4843   2.325   0.0266 *
+B   0.4346     0.1934   2.247   0.0317 *
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.147 on 32 degrees of freedom
+
+Number of iterations to convergence: 5 
+Achieved convergence tolerance: 3.588e-06
+  (1 observation deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>nls_all <span class="ot">&lt;-</span> <span class="fu">nls</span>(IER <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse,</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_all)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IER ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+A  9.88632    1.44545   6.840 5.44e-10 ***
+B  0.61002    0.08486   7.189 9.95e-11 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.6 on 105 degrees of freedom
+
+Number of iterations to convergence: 7 
+Achieved convergence tolerance: 2.068e-06
+  (5 observations deleted due to missingness)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>gg1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> bd_Pousse, <span class="fu">aes</span>(<span class="at">x=</span>Dry.weight..mg., <span class="at">y=</span>ORR, <span class="at">color =</span> Treatment))<span class="sc">+</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>()<span class="sc">+</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Dry weight"</span>) <span class="sc">+</span> </span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"ORR"</span>)<span class="sc">+</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ylim(0,9)+</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#scale_color_discrete(name="Site")+</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ggtitle ('ORR as a function of DW')+</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">'nls'</span>,</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">formula =</span> y <span class="sc">~</span> A <span class="sc">*</span> x<span class="sc">^</span>B,</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">method.args =</span> <span class="fu">list</span>(<span class="at">start =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>)),</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> <span class="cn">FALSE</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>  )<span class="co">#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">#            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> Treatment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;ggproto object: Class FacetWrap, Facet, gg&gt;
+    compute_layout: function
+    draw_back: function
+    draw_front: function
+    draw_labels: function
+    draw_panels: function
+    finish_data: function
+    init_scales: function
+    map_data: function
+    params: list
+    setup_data: function
+    setup_params: function
+    shrink: TRUE
+    train_scales: function
+    vars: function
+    super:  &lt;ggproto object: Class FacetWrap, Facet, gg&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>gg1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 4 rows containing non-finite values (`stat_smooth()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 4 rows containing missing values (`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Pousse_Meseck_Size_scaling_exp_only_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>nls_8 <span class="ot">&lt;-</span> <span class="fu">nls</span>(ORR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"8"</span>,], </span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>nls_7<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">nls</span>(ORR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7.5"</span>,], </span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>nls_7 <span class="ot">&lt;-</span> <span class="fu">nls</span>(ORR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7"</span>,], </span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: ORR ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)   
+A  0.32548    0.09497   3.427  0.00151 **
+B -0.03923    0.14204  -0.276  0.78395   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.1798 on 37 degrees of freedom
+
+Number of iterations to convergence: 6 
+Achieved convergence tolerance: 7.096e-06
+  (3 observations deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7<span class="fl">.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: ORR ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)   
+A  0.35607    0.10073   3.535  0.00123 **
+B  0.07252    0.14602   0.497  0.62275   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.1701 on 33 degrees of freedom
+
+Number of iterations to convergence: 10 
+Achieved convergence tolerance: 6.934e-06</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: ORR ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)  
+A  0.15264    0.08087   1.888   0.0682 .
+B -0.24997    0.20202  -1.237   0.2250  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.19 on 32 degrees of freedom
+
+Number of iterations to convergence: 11 
+Achieved convergence tolerance: 2.023e-06
+  (1 observation deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>nls_all <span class="ot">&lt;-</span> <span class="fu">nls</span>(ORR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse,</span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_all)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: ORR ~ A * Dry.weight..mg.^B
+
+Parameters:
+   Estimate Std. Error t value Pr(&gt;|t|)    
+A  0.310620   0.059081   5.258 7.63e-07 ***
+B -0.008142   0.087607  -0.093    0.926    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.181 on 106 degrees of freedom
+
+Number of iterations to convergence: 7 
+Achieved convergence tolerance: 9.113e-06
+  (4 observations deleted due to missingness)</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>gg1 <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> bd_Pousse, <span class="fu">aes</span>(<span class="at">x=</span>Dry.weight..mg., <span class="at">y=</span>IRR, <span class="at">color =</span> Treatment))<span class="sc">+</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>()<span class="sc">+</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Dry weight"</span>) <span class="sc">+</span> </span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"IRR"</span>)<span class="sc">+</span></span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ylim(0,9)+</span></span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#scale_color_discrete(name="Site")+</span></span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">#ggtitle ('IRR as a function of DW')+</span></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">method =</span> <span class="st">'nls'</span>,</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">formula =</span> y <span class="sc">~</span> A <span class="sc">*</span> x<span class="sc">^</span>B,</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">method.args =</span> <span class="fu">list</span>(<span class="at">start =</span> <span class="fu">c</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>)),</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> <span class="cn">FALSE</span></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>  )<span class="co">#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',</span></span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">#            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +</span></span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> Treatment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;ggproto object: Class FacetWrap, Facet, gg&gt;
+    compute_layout: function
+    draw_back: function
+    draw_front: function
+    draw_labels: function
+    draw_panels: function
+    finish_data: function
+    init_scales: function
+    map_data: function
+    params: list
+    setup_data: function
+    setup_params: function
+    shrink: TRUE
+    train_scales: function
+    vars: function
+    super:  &lt;ggproto object: Class FacetWrap, Facet, gg&gt;</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>gg1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 4 rows containing non-finite values (`stat_smooth()`).</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Removed 4 rows containing missing values (`geom_point()`).</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Pousse_Meseck_Size_scaling_exp_only_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>nls_8 <span class="ot">&lt;-</span> <span class="fu">nls</span>(IRR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"8"</span>,], </span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>nls_7<span class="fl">.5</span> <span class="ot">&lt;-</span> <span class="fu">nls</span>(IRR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7.5"</span>,], </span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a>nls_7 <span class="ot">&lt;-</span> <span class="fu">nls</span>(IRR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse[bd_Pousse<span class="sc">$</span>Treatment<span class="sc">==</span><span class="st">"7"</span>,], </span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IRR ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)   
+A   1.4707     0.5196   2.830  0.00747 **
+B  -0.0789     0.1698  -0.465  0.64489   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.058 on 37 degrees of freedom
+
+Number of iterations to convergence: 9 
+Achieved convergence tolerance: 3.173e-06
+  (3 observations deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7<span class="fl">.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IRR ~ A * Dry.weight..mg.^B
+
+Parameters:
+   Estimate Std. Error t value Pr(&gt;|t|)   
+A  1.752216   0.620577   2.824  0.00799 **
+B -0.004973   0.177314  -0.028  0.97779   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.18 on 33 degrees of freedom
+
+Number of iterations to convergence: 9 
+Achieved convergence tolerance: 2.407e-06</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_7)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IRR ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)
+A   0.8056     0.5072   1.588    0.122
+B  -0.2328     0.2411  -0.965    0.342
+
+Residual standard error: 1.144 on 32 degrees of freedom
+
+Number of iterations to convergence: 12 
+Achieved convergence tolerance: 5.953e-06
+  (1 observation deleted due to missingness)</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>nls_all <span class="ot">&lt;-</span> <span class="fu">nls</span>(IRR <span class="sc">~</span> A <span class="sc">*</span> Dry.weight..mg.<span class="sc">^</span>B, </span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>                 <span class="at">start =</span> <span class="fu">list</span>(<span class="at">A =</span> <span class="fl">2.3</span>, <span class="at">B =</span> <span class="fl">0.72</span>),</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> bd_Pousse,</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">na.action=</span>na.exclude)</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(nls_all)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Formula: IRR ~ A * Dry.weight..mg.^B
+
+Parameters:
+  Estimate Std. Error t value Pr(&gt;|t|)    
+A  1.50747    0.34544   4.364 2.98e-05 ***
+B -0.04025    0.10435  -0.386      0.7    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 1.122 on 106 degrees of freedom
+
+Number of iterations to convergence: 8 
+Achieved convergence tolerance: 2.829e-06
+  (4 observations deleted due to missingness)</code></pre>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

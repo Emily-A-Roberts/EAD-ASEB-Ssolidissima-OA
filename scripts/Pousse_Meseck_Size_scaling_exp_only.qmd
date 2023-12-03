@@ -1,0 +1,205 @@
+---
+title: "Biodeposition_size_scaling"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(data.table)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+
+bd_Pousse <- read.csv("Pousse_Meseck_Raw Data Surfclam Biodeposition.csv", stringsAsFactors = FALSE, header = TRUE)
+
+
+str(bd_Pousse)
+
+bd_Pousse$Treatment <- as.factor(bd_Pousse$pH)
+bd_Pousse$OER[bd_Pousse$OER<=-.5]<-NA
+bd_Pousse$IER[bd_Pousse$IER<=-.5]<-NA
+ambient <- bd_Pousse[bd_Pousse$Treatment==8,]
+```
+
+You can add options to executable code like this
+
+```{r}
+
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg., y=OER, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("OER")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ x^B,
+    method.args = list(start = c( B = 0.72)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(OER ~  Dry.weight..mg.^B, 
+                 start = list(B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(OER ~  Dry.weight..mg.^B, 
+                 start = list(B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+nls_7 <- nls(OER ~  Dry.weight..mg.^B, 
+                 start = list(B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+                 na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+summary(nls_7)
+
+nls_all <- nls(OER ~ Dry.weight..mg.^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse,
+               group = Treatment,
+                 na.action=na.exclude)
+summary(nls_all)
+
+
+```
+
+```{r}
+
+#This doesn't work unless the dry weight is above 1. 
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg.+1, y=IER, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("IER")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('IER as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ x^B,
+    method.args = list(start = c( B = 0.3)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(IER~ Dry.(weight..mg.+1)^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(IER~ (Dry.weight..mg.+1)^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+nls_7 <- nls(IER~ (Dry.weight..mg.+1)^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+                 na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+summary(nls_7)
+
+nls_all <- nls(IER ~ (Dry.weight..mg.+1)^B, 
+                 start = list(B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+
+```
+
+```{r}
+
+#This doesn't work unless the dry weight is above 1. 
+gg1 <- ggplot(data = bd_Pousse, aes(x=Length..mm., y=IER, color = Treatment))+
+  geom_point()+
+    #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('IER as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ m*x+B,
+    method.args = list(start = c(m = 1, B = 1)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(IER~ Dry.(weight..mg.+1)^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(IER~ (Dry.weight..mg.+1)^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+nls_7 <- nls(IER~ (Dry.weight..mg.+1)^B, 
+                 start = list( B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+                 na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+summary(nls_7)
+
+nls_all <- nls(IER ~ (Dry.weight..mg.+1)^B, 
+                 start = list(B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+```
+
+```{r}
+gg1 <- ggplot(data = bd_Pousse, aes(x=Dry.weight..mg., y=IRR, color = Treatment))+
+  geom_point()+
+  xlab("Dry weight") + 
+  ylab("IRR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('IRR as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 0.72)),
+    se = FALSE
+  )#stat_smooth(color = 1, method = 'nls', formula = 'y~a*exp(b*x)',
+    #            method.args = list(start=c(A = 2.3, B=.72)), se=FALSE) +
+  facet_wrap(~ Treatment)
+
+gg1
+
+
+nls_8 <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="8",], 
+                 na.action=na.exclude)
+nls_7.5 <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7.5",], 
+                 na.action=na.exclude)
+nls_7 <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse[bd_Pousse$Treatment=="7",], 
+                 na.action=na.exclude)
+summary(nls_8)
+summary(nls_7.5)
+summary(nls_7)
+
+nls_all <- nls(IRR ~ A * Dry.weight..mg.^B, 
+                 start = list(A = 2.3, B = 0.72),
+                 data = bd_Pousse,
+                 na.action=na.exclude)
+summary(nls_all)
+```

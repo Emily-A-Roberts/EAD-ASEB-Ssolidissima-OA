@@ -1,0 +1,253 @@
+---
+title: "Biodeposition_summary2"
+format: html
+editor: visual
+---
+
+## Length-standardized biodeposition
+
+This code estimates biodeposition results and standardizes CR and other values for a clam of 36mm.
+
+```{r}
+#| include: false
+library(ggplot2)
+library(ggpubr)
+library(data.table)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+
+bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
+
+bd<- bd[bd$Month =="September"|bd$Month =="April"|bd$Month =="June",]
+bd$Site <- as.factor(bd$Site)
+bd$Month <- as.factor(bd$Month)
+bd$Month <- factor(bd$Month, levels=c("September", "April", "June"))
+bd$Treatment <- as.factor(bd$Treatment)
+bd$Treatment <- factor(bd$Treatment, levels=c("N", "S", "OUT"))
+
+bd <- bd[bd$TPM>=.9,]
+
+mean(bd$Length)
+
+bd$CR_len.scaled <- bd$CR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
+bd$AR_len.scaled <- bd$AR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
+bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
+bd$CI <- bd$Dry.weight/(bd$Length^3)
+```
+
+```{r}
+gg1 <- ggplot(data = bd, aes(x=Length, y=Dry.weight, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  #ylab("organic content of water (mg/L)")+
+  #ylim(0,1)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ Site)
+
+gg1
+```
+
+```{r}
+gg1 <- ggplot(data = bd, aes(x=Length, y=CR_len.scaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site)
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AR_len.scaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site)
+
+gg1
+
+
+```
+
+```{r}
+gm1 <- lm(CR_len.scaled ~ Site*Dry.weight*Month*Treatment, 
+              data = bd)
+gm2 <- lm(CR_len.scaled ~ Site*Month*Dry.weight, 
+              data = bd)
+gm3 <- lm(CR_len.scaled ~ Site*Month*CI, 
+              data = bd)
+gm4 <- lm(CR_len.scaled ~ Site*Month, 
+              data = bd)
+gm5 <- lm(CR_len.scaled ~ Site+Month, 
+              data = bd)
+AIC(gm1,gm2,gm3,gm4,gm5)
+BIC(gm1,gm2,gm3,gm4,gm5)
+
+summary(gm2) #The best fit model does account for interactions with dry weight, but is harder to interpret. 
+
+summary(gm3)#Well, for this one CI is significant but there ater interactions
+
+#Note there is an effect of site and some interactions as well. 
+
+summary(gm4) #If we are only interested in treatments, there is an effect of site and among the three months. It's not a significantly worse model using AIC and in terms of BIC it is better. 
+
+gm4 <- lm(CR_len.scaled ~ Site*Month, 
+              data = bd)
+
+
+gm6 <- lm(CR ~ Treatment, 
+              data = bd[bd$Site=="Provincetown",]) #Separate analysis on Provincetown to confirm no difference in feeding rates between treatments. 
+```
+
+```{r}
+
+
+```
+
+```{r}
+library(RColorBrewer)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(ggsignif)
+
+
+# get (adjusted) weight means per group
+model_means <- emmeans(lm(CR_len.scaled~Month*Site, data = bd), ~ Month * Site, data = bd)
+ 
+# show differences
+pairs(model_means, adjust = "Tukey", alpha = 0.05)
+#> P value adjustment: tukey method for comparing a family of 3 estimates
+
+# add letters to each mean
+cld_out <- cld(object = model_means,
+    adjust = "Tukey",
+    Letters = letters,
+    alpha = 0.05)
+ 
+
+cld_out <- as.data.frame.list(cld_out)
+
+model4 <- summary(gm4)$coefficients
+
+knitr::kable(model4$coefficients)
+
+
+knitr::kable(model_means)
+
+int_name <- interaction(cld_out$Month, cld_out$Site)
+library(tidyverse)
+  my_x_labels <- setNames(nm = c("June.Provincetown","April.Eel Pond","June.Eel Pond", "April.Provincetown","September.Eel Pond","September.Provincetown"),
+                            c("Prov","Eel","Eel","Prov", "Eel", "Prov"))
+
+str(model_means)
+ylab_text <- expression(paste("Length standardized CR (L  ",hr^-1, ")"))
+
+# Create a ggplot
+gg_CR <- ggplot(data = as.data.frame(cld_out), 
+            aes(x = interaction(Month, Site), y = emmean, fill = Month)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = emmean + SE, ymax = emmean - SE), width = 0.2, position = position_dodge(0.9)) +
+  labs(x = "Site and Month", y = ylab_text) +
+  ylim(c(0,1.7))+
+  theme_minimal()+
+  theme(legend.position = "none")+
+  geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
+  theme_classic()+
+  scale_x_discrete(labels = my_x_labels)+ 
+  scale_fill_brewer(palette="Set2")
+
+gg_CR
+```
+
+```{r}
+# get (adjusted) weight means per group
+model_means <- emmeans(lm(AR_len.scaled~Month*Site, data = bd), ~ Month * Site, data = bd)
+ 
+# show differences
+pairs(model_means, adjust = "Tukey", alpha = 0.05)
+#> P value adjustment: tukey method for comparing a family of 3 estimates
+
+# add letters to each mean
+cld_out <- cld(object = model_means,
+    adjust = "Tukey",
+    Letters = letters,
+    alpha = 0.05)
+ 
+
+cld_out <- as.data.frame.list(cld_out)
+
+int_name <- interaction(cld_out$Month, cld_out$Site)
+library(tidyverse)
+  my_x_labels <- setNames(nm = c("June.Provincetown","April.Eel Pond","June.Eel Pond", "April.Provincetown","September.Eel Pond","September.Provincetown"),
+                            c("Prov","Eel","Eel","Prov", "Eel", "Prov"))
+
+str(model_means)
+ylab_text <- expression(paste("Length standardized AR (mg  ",hr^-1, ")"))
+# Create a ggplot
+gg_AR <- ggplot(data = as.data.frame(cld_out), 
+            aes(x = interaction(Month, Site), y = emmean, fill = Month)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = emmean + SE, ymax = emmean - SE), width = 0.2, position = position_dodge(0.9)) +
+  labs(x = "Site and Month", y = ylab_text)+
+    ylim(c(0,2.5))+
+  theme_minimal(legend.position = "none")+
+  geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
+  theme_classic()+
+  scale_x_discrete(labels = my_x_labels) + 
+  scale_fill_brewer(palette="Set2")
+
+```
+
+```{r}
+# get (adjusted) weight means per group
+model_means <- emmeans(lm(AE~Month*Site, data = bd), ~ Month * Site, data = bd)
+ 
+# show differences
+pairs(model_means, adjust = "Tukey", alpha = 0.05)
+#> P value adjustment: tukey method for comparing a family of 3 estimates
+
+# add letters to each mean
+cld_out <- cld(object = model_means,
+    adjust = "Tukey",
+    Letters = letters,
+    alpha = 0.05)
+ 
+
+cld_out <- as.data.frame.list(cld_out)
+
+int_name <- interaction(cld_out$Month, cld_out$Site)
+library(tidyverse)
+  my_x_labels <- setNames(nm = c("June.Provincetown","April.Eel Pond","June.Eel Pond", "April.Provincetown","September.Eel Pond","September.Provincetown"),
+                            c("Prov","Eel","Eel","Prov", "Eel", "Prov"))
+
+str(model_means)
+# Create a ggplot
+gg_AE <- ggplot(data = as.data.frame(cld_out), 
+            aes(x = interaction(Month, Site), y = emmean, fill = Month)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = emmean + SE, ymax = emmean - SE), width = 0.2, position = position_dodge(0.9)) +
+  labs(x = "Site and Month", y = "AE") +
+      ylim(c(0,1))+
+  theme_minimal()+
+  geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
+  theme_classic()+
+  scale_x_discrete(labels = my_x_labels)+ 
+  scale_fill_brewer(palette="Set2")
+
+
+```
+
+```{r}
+library(gridExtra)
+
+legend <- get_legend(gg_CR)
+
+gg_CR <- gg_CR + theme(legend.position="none")
+gg_AR <- gg_AR + theme(legend.position="none")
+gg_AE <- gg_AE + theme(legend.position="none")
+
+
+
+grid.arrange(gg_CR, gg_AR, legend, gg_AE, ncol=3, nrow =2,widths=c(2,2, .8))
+gg_AE
+
+library(patchwork)
+gg_CR + gg_AR + gg_AE + plot_layout(ncol = 3)
+```

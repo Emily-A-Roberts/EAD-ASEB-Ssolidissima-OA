@@ -1,0 +1,21 @@
+Date,Sample ID,Site,Plot,Stratum,Shell treatment,Water/Sed  Temp,Salinity,pH temp,pH,DIC 
+7/14/22,107,Provincetown,Transplant,2cm,No Shell,21.3,32.29,23.3,7.256,2746.33
+7/14/22,108,Provincetown,Transplant,2cm,Shell,21.3,32.29,23.6,7.402,2810.49
+7/14/22,109,Provincetown,Transplant,Bottom water,No Shell,21.3,32.29,22.9,7.530,2319.24
+7/14/22,110,Provincetown,Transplant,Bottom water,Shell,21.3,32.29,23.1,7.506,2342.98
+7/14/22,111,Provincetown,Monitoring,2cm,NA,21.9,32.95,23.0,7.309,2376.86
+7/14/22,112,Provincetown,Monitoring,5cm,NA,21.9,32.95,22.9,7.357,2343.63
+7/14/22,113,Provincetown,Monitoring,10cm,NA,21.9,32.95,23.0,7.194,2441.70
+7/14/22,114,Provincetown,Monitoring,15cm,NA,21.9,32.95,23.2,7.087,2464.33
+7/14/22,115,Provincetown,Monitoring,20cm,NA,21.9,32.95,23.6,7.104,2456.67
+7/14/22,116,Provincetown,Monitoring,Bottom water,NA,21.7,32.95,23.1,7.914,2020.98
+7/15/22,117,Eel Pond,Transplant,2cm,No Shell,25.5,31.42,25.6,7.290,2475.23
+7/15/22,118,Eel Pond,Transplant,2cm,Shell,25.5,31.42,26.1,7.225,3329.76
+7/15/22,119,Eel Pond,Transplant,Bottom water,No Shell,25.5,31.42,27.9,7.865,1829.03
+7/15/22,120,Eel Pond,Transplant,Bottom water,Shell,25.5,31.42,27.6,7.870,1822.25
+7/15/22,121,Eel Pond,Monitoring,2cm,NA,24.2,31.42,25.8,7.178,2771.18
+7/15/22,122,Eel Pond,Monitoring,5cm,NA,24.2,31.42,25.3,7.272,2095.43
+7/15/22,123,Eel Pond,Monitoring,10cm,NA,24.2,31.42,25.4,7.178,2676.67
+7/15/22,124,Eel Pond,Monitoring,15cm,NA,24.2,31.42,25.3,7.195,2798.78
+7/15/22,125,Eel Pond,Monitoring,20cm,NA,24.2,31.42,25.4,7.269,2407.11
+7/15/22,126,Eel Pond,Monitoring,Bottom water,NA,25.5,31.42,28.2,7.848,1825.44
