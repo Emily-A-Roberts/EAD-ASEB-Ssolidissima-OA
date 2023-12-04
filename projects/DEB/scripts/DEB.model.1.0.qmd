@@ -23,7 +23,7 @@ DEB with pCO2 effect
 ### Load packages, access files and DEB parameters
 
 ```{r}
-dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/data/DEB_model_data/"
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/"
 library(R.matlab)
 filename <- paste(dir_data,sep="","results_Ensis_directus.mat")
 ParaMat=readMat(filename )
@@ -33,19 +33,34 @@ Param <- list()
 
 ##### Initialize *Spisula solidissima* parameters
 
+Parameters from email correspondence 12/4/23
+
 ```{r}
 
-
+Param$RhoV=15600; #(it is a general number for bivalves)
 Param$GammaL1=0.8
 Param$GammaL2=0.8
-Param$v= 	  	0.05063
-Param$Kappa=0.8605
-Param$Pm=13.48
-Param$Eg= 	 2361
-Param$Shape= 	0.445
-Param$s_M= 	 	 	 	7.49598
-Param$Pxm=  	30.6986/0.8
+Param$v= 0.011 #cm/d Energy conductance
+Param$Kappa=0.9607
+Param$KappaX <- 0.8 #K Digestion efficiency of food
+Param$Pm=10.64 #13.48
+Param$Eg=2360 	 #2361
+Param$Shape=0.37 	#0.445
+Param$s_M= 17.8 	 	 	 	#7.49598
+Param$Pxm= 9.08/.8  	#30.6986/0.8
 Param$Em=Param$Pxm*Param$KappaX/Param$v
+
+#Arrhenius 5 parameter TPC
+Param$Ta <- 9018 #K
+Param$T1 <- 293.15 #K
+Param$Tl <- 277.3 #K
+Param$Th <- 296.5 #K
+Param$Tal <- 15601 #K
+Param$Tah <- 33775 #K
+
+Param$Lp <- 3 #cm From Pousse et al. 2023
+Param$dv <- 0.09 
+Param$RhoE <- 19600 #J/g
 ```
 
 Parameters from conversation on GitHub on Jan 10, 2022
@@ -56,26 +71,6 @@ Param$pHh <- 6778 #uatm
 
 Param$MpHl <- 700 #uatm
 Param$MpHh <- 1300 #uatm
-```
-
-I'm taking these values directly from the paper because they aren't part of the code - ER 12/2/23
-
-```{r}
-Param$Lp <- 3 #cm From Pousse et al. 2023
-Param$dv <- 0.09 
-Param$RhoE <- 19600 #J/g
-Param$RhoV <-  10000 #This is a dummy number I need this number. It is missing. 
-
-#Arrhenius 5 parameter TPC
-Param$Ta <- 9018 #K
-Param$T1 <- 293.15 #K
-Param$Tl <- 277.3 #K
-Param$Th <- 296.5 #K
-Param$Tal <- 15601 #K
-Param$Tah <- 33775 #K
-
-Param$v <- 0.011 #cm/d Energy conductance
-Param$KappaX <- 0.8 #K Digestion efficiency of food
 ```
 
 ##### Initialize *Spisula solidissima* pH parameters
