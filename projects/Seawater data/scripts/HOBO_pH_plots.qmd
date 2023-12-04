@@ -484,7 +484,7 @@ min(data_combined$Date)
 
 ```{r}
 # Plot tides
-setwd("~/Documents/School and jobs/Milford/Surfclam OA/Environmental conditions/Tides")
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Tides")
 dir()
 tides.Ptown1 <- read.table("Ptown_Jul.txt", skip =14)
 tides.Ptown2 <- read.table("Ptown_Aug.txt", skip =14)
@@ -505,12 +505,13 @@ tides <- data.frame(tides = rbind(tides.Ptown,tides.Den,tides.Eel),
                      rep("Den",times=nrow(tides.Ptown)),
                      rep("Eel",times=nrow(tides.Ptown)))))
 names(tides)<- c("date","day","Time","Tideheight","Site")
-head(tides)
-(Date1 <- paste(tides$date,tides$Time,sep=" "))
-head(tides)
+
+Date1 <- paste(tides$date,tides$Time,sep=" ")
+
 tides$Date <- as.POSIXct(strptime(Date1,format = "%Y/%m/%d %H:%M"))
 
-data_combined$Date<-round_date(as.POSIXct(data_combined$Date),unit="minutes")
+data_combined$Date<-round_date(as.POSIXct(data_combined$Date),
+                               unit="minutes")
 data_combined$Site<-as.factor(data_combined$Site)
 
 head(data_combined)
