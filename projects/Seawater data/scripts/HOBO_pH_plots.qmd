@@ -22,9 +22,9 @@ data_combined_new <- data.frame(
 )
 
 # working directories
-wdDen <- "~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/data/HOBOpHdata/Dennis"
-wdPtown <- "~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/data/HOBOpHdata/Ptown"
-wdEel <- "~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/data/HOBOpHdata/Eel_Pond"
+wdDen <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata/Dennis"
+wdPtown <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata/Ptown"
+wdEel <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata/Eel_Pond"
 ```
 
 ### Dennis
@@ -36,6 +36,7 @@ filenames
 ```
 
 ```{r}
+setwd(wdDen)
 # Late June to early Aug
 #(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
 open_file <- "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
@@ -59,6 +60,7 @@ data_combined <- rbind(data_combined_new)
 ```
 
 ```{r}
+setwd(wdDen)
 # Late June to early Aug
 #(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
 open_file <- "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
@@ -83,6 +85,7 @@ data_combined <- rbind(data_combined_new)
 ```
 
 ```{r}
+setwd(wdDen)
 # Aug to mid September
 #"Den_077 2022-09-14 14_08_26 EDT (Data EDT).csv" 
 #"Den_077 2022-09-21 09_28_37 EDT (Data EDT)(1).csv" is the same file read out later on
@@ -120,6 +123,7 @@ filenames
 ```
 
 ```{r}
+setwd(wdPtown)
 # mid June to August
 (open_file <- filenames[2])
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -143,6 +147,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdPtown)
 # August
 (open_file <- filenames[6])
 open_file <- "Ptown_075 2022-08-29 21_52_54 EDT (Data EDT).csv"
@@ -169,6 +174,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdPtown)
 # September
 open_file <- "Ptown_20573560_Ptown 2022-09-29 17_27_52 EDT (Data EDT).csv"
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -194,6 +200,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdPtown)
 # October
 # This sensor seems to be deployed at Eel pond originally, recalibrated without a change in the name, 
 # and then moved to Ptown. The segment at Ptown starts late in the day on 9/27/22
@@ -224,6 +231,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdPtown)
 # November
 
 open_file <- "Ptown_076 2022-12-05 21_20_00 EST (Data EST).csv"
@@ -257,6 +265,7 @@ filenames <- dir()
 ```
 
 ```{r}
+setwd(wdEel)
 #mid June to Aug
 #(open_file <- filenames[2])
 (open_file <- "21333340_Eel_Pond 2022-08-05 17_43_02 EDT (Data EDT).csv")
@@ -284,6 +293,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdEel)
 #Aug to lateAug
 (open_file <- filenames[4])
 (open_file <- "Eel_076 2022-09-27 13_35_57 EDT (Data EDT).csv")
@@ -336,6 +346,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdEel)
 # #October???
 # #October is not clear.
 # #If the other legger was still logging and deployed at this site
@@ -421,6 +432,7 @@ data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ```{r}
+setwd(wdEel)
 # November
 #(open_file <- filenames[3])
 open_file <- "20573560_Ptown 2022-12-05 16_55_15 EST (Data EST)_actuallyEel.csv"
