@@ -1,0 +1,86 @@
+EXO User Cal File
+File Created: 6/13/2022 10:30:47 AM
+
+[General]
+Device = PH
+SN = 13G102286
+Cal Parameter = pH
+Cal Started = True
+Raw Data = pH mV
+Last Cal Time = 6/8/2021 13:29:00
+Cal Start Time = 6/13/2022 15:30:00
+Additional Input 1 = N/A
+Additional Input 2 = N/A
+Additional Input 3 = N/A
+
+[Device Info]
+Product = 1
+Model = 1
+SubModel = 2
+Firmware Version = 3.0.0
+
+[Sonde Info]
+Type = Exo2
+ID = Sonde 13H101026
+SN = 13H101026
+Firmware Version = 1.0.83
+
+[KOR Info]
+Hardware = EXO Handheld
+KOR Version = 1.5.0.39
+Worksheet Version = 1
+
+[Additional Info]
+Cond Factory Gain = 0
+Wiper Factory Home = 0
+Depth Mounting = 
+Depth Offset = 0
+Depth Altitude = 0
+Depth Latitude = 0
+
+[Current Coeffs]
+A0 = -127.2942
+A1 = -5.325451
+
+[Cal Point 1]
+Standard = 7.05
+Type = ysi pH7
+Manuf = ysi
+Lot No =  
+Cal Point Accepted = True
+Temperature = 14.8073
+Pre Value = 6.98
+Post Value = 7.05
+Raw Value = -22.89
+Additional Input 1 = NaN
+Additional Input 2 = NaN
+Additional Input 3 = NaN
+Stable = True
+
+[Cal Point 2]
+Standard = 10.13
+Type = ysi pH10
+Manuf = ysi
+Lot No =  
+Cal Point Accepted = True
+Temperature = 13.95427
+Pre Value = 10.23
+Post Value = 10.13
+Raw Value = -198.10
+Additional Input 1 = NaN
+Additional Input 2 = NaN
+Additional Input 3 = NaN
+Stable = True
+
+[Results]
+Cal Completed = True
+Cal Applied = True
+Cal Valid = True
+Device Removed = False
+Uncalibrated = False
+QC Score = 2
+Cal Time = 6/13/2022 15:30:00
+
+[New Coeffs]
+A0 = -101.0499
+A1 = -5.045239

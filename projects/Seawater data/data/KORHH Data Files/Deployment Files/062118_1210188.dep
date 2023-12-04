@@ -1,0 +1,40 @@
+EXO Deployment File
+File Created:6/21/2018 12:13:36 PM
+
+[General]
+User Name = "YSI"
+Site Name = "Default Site"
+File Name Prefix = "Mlfd Harbor"
+Logging Interval = "00:15:00.000"
+Averaging Duration = "00:00:00.000"
+Sonde Mode = "Normal"
+Burst Duration = "00:00:00.000"
+Wipe Interval = 1
+Deployment Time Zone = "Index 84"
+Averaging Mode = "0x00"
+
+[Adaptive Logging]
+Enable = FALSE
+Interval = "00:01:00.000"
+Duration = "00:01:00.000"
+Parameter 1 = "0x0E"
+Mode 1 = "Off"
+Threshold 1 = 0.00
+Parameter 2 = "0x0E"
+Mode 2 = "Off"
+Threshold 2 = 0.00
+
+[SDI-12]
+Address = "0"
+
+[SDI-12 Parameters]
+Parameter 1 = "0d5"
+Parameter 2 = "0d7"
+Parameter 3 = "0d17"
+Parameter 4 = "0d19"
+Parameter 5 = "0d54"
+Parameter 6 = "0d193"
+Parameter 7 = "0d218"
+Parameter 8 = "0d232"
+Parameter 9 = "0d239"
+Parameter 10 = "0d212"
