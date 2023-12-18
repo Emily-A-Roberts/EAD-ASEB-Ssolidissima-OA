@@ -7,5 +7,8 @@
   },
   "projects/Biodeposition/scripts/Biodeposition_summary.qmd": {
     "Biodeposition_summary.html": "a2b36f01"
+  },
+  "projects/Biodeposition/scripts/Biodeposition_summary_size_scaling_walkthrough.qmd": {
+    "Biodeposition_summary_size_scaling_walkthrough.html": "375a0be0"
   }
 }

@@ -13,7 +13,9 @@ This code estimates biodeposition results and standardizes CR and other values f
 library(ggplot2)
 library(ggpubr)
 library(data.table)
-setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+library(kableExtra)
+library(knitr)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
 
 bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
 
@@ -126,7 +128,7 @@ cld_out <- as.data.frame.list(cld_out)
 
 model4 <- summary(gm4)$coefficients
 
-knitr::kable(model4$coefficients)
+#knitr::kable(model4$Estimate)
 
 
 knitr::kable(model_means)
@@ -187,7 +189,7 @@ gg_AR <- ggplot(data = as.data.frame(cld_out),
   geom_errorbar(aes(ymin = emmean + SE, ymax = emmean - SE), width = 0.2, position = position_dodge(0.9)) +
   labs(x = "Site and Month", y = ylab_text)+
     ylim(c(0,2.5))+
-  theme_minimal(legend.position = "none")+
+  #theme_minimal(legend.position = "none")+
   geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
   theme_classic()+
   scale_x_discrete(labels = my_x_labels) + 

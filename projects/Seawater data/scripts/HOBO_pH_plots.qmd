@@ -1,7 +1,12 @@
 ---
 title: "pH_HOBO_plots"
 author: "Emily Roberts"
-format: html
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
 editor: visual
 ---
 
@@ -257,6 +262,40 @@ data_combined <- rbind(data_combined,data_combined_new)
 
 ```
 
+```{r}
+setwd(wdPtown)
+# skip to April to avoid freezing temps
+
+open_file <- "20573560_Ptown 2023-05-10 14_13_07 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+head(df)
+tail(df,80)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%y %H:%M")) #Switch to EDT from EST?
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2023-04-18 15:15:15",]
+df <- df[df$datetime<"2023-05-10 09:00:00",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C., type = "l")
+length(df$Ch..1...Temperature.....C.)
+
+plot(df$Ch..1...Temperature.....C., df$Ch..3...pH....pH., pch = '.')
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C.,
+  pH = df$Ch..3...pH....pH.
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdPtown)
+# Don't see May / June. We stopped the experiment in June. 
+
+```
+
 ### Eel Pond
 
 ```{r}
@@ -457,6 +496,32 @@ data_combined_new <- data.frame(
 data_combined <- rbind(data_combined,data_combined_new)
 
 
+```
+
+```{r}
+setwd(wdEel)
+# April
+#(open_file <- filenames[3])
+open_file <- "21333340_Eel_Pond 2023-05-08 09_10_54 EDT (Data EDT).csv"
+
+df <- read.csv(open_file, stringsAsFactors = F)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2023-04-19 17:00:00 EDT",]
+#df <- df[df$datetime<"2022-12-05 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C., type = "l")
+plot(df$Ch..1...Temperature.....C., df$Ch..3...pH....pH., pch = '.')
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C.,
+  pH = df$Ch..3...pH....pH.
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
 ```
 
 ## Combine

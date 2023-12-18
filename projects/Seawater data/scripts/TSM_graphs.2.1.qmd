@@ -1,0 +1,507 @@
+---
+title: "TSM_graphs_2.1"
+author: "Emily Roberts"
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+#| include: false
+library(ggplot2)
+library(ggpubr)
+library(data.table)
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
+
+bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
+
+bd<- bd[bd$Month =="September"|bd$Month =="April"|bd$Month =="June",]
+bd$Site <- as.factor(bd$Site)
+bd$Month <- as.factor(bd$Month)
+bd$Month <- factor(bd$Month, levels=c("September", "April", "June"))
+bd$Treatment <- as.factor(bd$Treatment)
+bd$Treatment <- factor(bd$Treatment, levels=c("N", "S", "OUT"))
+
+bd <- bd[bd$TPM>=.9,]
+
+mean(bd$Length)
+```
+
+New size scaling
+
+```{r}
+bd$CR_unscaled <- bd$CR * (bd$Dry.weight^.76)
+bd$AR_unscaled <- bd$AR * (bd$Dry.weight^.76)
+bd$RR_unscaled <- bd$RR * (bd$Dry.weight^.76)
+
+
+bd$CR_len.scaled <- bd$CR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
+bd$AR_len.scaled <- bd$AR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
+bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
+
+```
+
+CR
+
+```{r}
+
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=CR_len.scaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site)
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AR_len.scaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site)
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=Dry.weight, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  #ylab("organic content of water (mg/L)")+
+  #ylim(0,1)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ Site)
+
+gg1
+```
+
+Now plotting unscaled values
+
+```{r}
+gg1 <- ggplot(data = bd, aes(x=Length, y=CR_unscaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site)
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AR_unscaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site)
+
+gg1
+
+
+```
+
+I want to redo the following graph but instead of TPM it should be TPM of seawater. I need to add some columns to the dataset to do this analysis.
+
+```{r}
+
+gg1 <- ggplot(data = bd, aes(x=TPM, y=CR_len.scaled, color = Site))+
+  geom_point(aes(shape=Month))#+
+  #xlab("Dry weight") #+ 
+  #facet_wrap(~ Site)
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=TPM, y=AR_len.scaled, color = Site))+
+  geom_point(aes(shape=Month))#+
+  #xlab("Dry weight") + 
+  #facet_wrap(~ Site)
+
+gg1
+```
+
+Now using length scaling
+
+```{r}
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=OER/(0.096*(Length/10)^1.93), color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  #ylab("OER new scaling")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+-
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ paste(Site,Month))
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=IER/(.44*(Length/10)^2.17), color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  #ylab("OER new scaling")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+-
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ paste(Site,Month))
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=OER/(Length/10)^2, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+ # ylab("IER")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+   facet_wrap(~ paste(Site,Month))
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=IER/(Length/10)^2, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+ # ylab("IER")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+   facet_wrap(~ paste(Site,Month))
+
+gg1
+
+
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=ORR, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  #ylab("ORR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+   facet_wrap(~ paste(Site,Month))
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=IRR, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+ # ylab("IRR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ paste(Site,Month))
+
+gg1
+```
+
+```{r}
+#| echo: false
+bd$Treatment
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=OER_scaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("OER_scaled")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ Site)
+
+gg1
+
+bd$Treatment
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=IER_scaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("IER_scaled")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ Site)
+
+gg1
+
+bd$Treatment
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=CR, color = Treatment))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("CR scaled")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ Site)
+
+gg1
+
+
+
+
+```
+
+```{r}
+
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=CR*Dry.weight^.76, color = Month ))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("CR")+
+  ylim(0,2.5)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Unscaled CR as a function of DW')+
+  facet_wrap(~ Site)
+gg1
+
+gg2 <- ggplot(data = bd, aes(x=Dry.weight, y=CR, color = Month ))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("CR")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Scaled CR as a function of DW')+
+  facet_wrap(~ Site)
+
+  gg2
+
+
+
+gg3 <- ggplot(data = bd, aes(x=Site, y=CR, col = Treatment))+
+  geom_boxplot()+
+  #xlab("Dry weight") + 
+  ylab("Clearance Rate")+
+  ylim(0,6)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Scaled CR')+
+  facet_wrap(~ Month)
+gg3
+
+
+gg4 <- ggplot(data = bd, aes(x=Site, y=CR*Dry.weight^.76, col = Treatment))+
+  geom_boxplot()+
+  #xlab("Dry weight") + 
+  ylab("Clearance Rate")+
+  ylim(0,3)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Unscaled CR')+
+  facet_wrap(~ Month)
+gg4
+
+
+
+```
+
+```{r}
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=AR*Dry.weight^.76, color = Month ))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("AR")+
+  ylim(0,2.5)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Unscaled AR as a function of DW')+
+  facet_wrap(~ Site)
+gg1
+
+gg2 <- ggplot(data = bd, aes(x=Dry.weight, y=AR, color = Month ))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("AR")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Scaled AR as a function of DW')+
+  facet_wrap(~ Site)
+
+  gg2
+  
+  
+gg2 <- ggplot(data = bd, aes(x=Dry.weight, y=AR, color = Site ))+
+  geom_point(aes(shape=Treatment))+
+  xlab("Dry weight") + 
+  ylab("AR")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Scaled AR as a function of DW')+
+  facet_wrap(~ Month)
+
+  gg2
+
+
+
+gg3 <- ggplot(data = bd, aes(x=Site, y=AR, col = Treatment))+
+  geom_boxplot()+
+  xlab("Dry weight") + 
+  ylab("AR")+
+  ylim(0,6)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Scaled AR')+
+  facet_wrap(~ Month)
+gg3
+
+
+gg4 <- ggplot(data = bd, aes(x=Site, y=AR*Dry.weight^.76, col = Treatment))+
+  geom_boxplot()+
+  xlab("Dry weight") + 
+  ylab("AR")+
+  ylim(0,3)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Unscaled AR')+
+  facet_wrap(~ Month)
+gg4
+
+gg4 <- ggplot(data = bd, aes(x=Site, y=AR*Dry.weight^.76, col = Site))+
+  geom_boxplot()+
+  #xlab("Dry weight") + 
+  ylab("AR")+
+  ylim(0,3)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Unscaled AR')+
+  facet_wrap(~ Month)
+gg4
+
+
+gm1 <- lm(AR*Dry.weight^.76 ~ Site*Dry.weight*Month+Treatment, 
+              data = bd)
+gm2 <- lm(AR*Dry.weight^.76 ~ Site+Dry.weight, 
+              data = bd)
+gm3 <- lm(AR ~ Treatment, 
+              data = bd[bd$Site=="Provincetown",]) #Separate analysis on Provincetown to confirm no difference in feeding rates between treatments. 
+summary(gm1)
+summary(gm2)
+summary(gm3)
+
+
+gm2 <- lm(AR*Dry.weight^.76 ~ Site*Dry.weight, 
+              data = bd)
+summary(gm2)
+gm2 <- lm(AR*Dry.weight^.76 ~ Site+Dry.weight, 
+              data = bd)
+summary(gm2)
+#effects(gm2)
+
+gg4 <- ggplot(data = bd, aes(x=Dry.weight, y=AR*Dry.weight^.76, col = Month))+
+  geom_point()+
+  geom_abline(slope = coef(gm2)[["Dry.weight"]], 
+              intercept = coef(gm2)[["(Intercept)"]])+
+  xlab("Dry weight") + 
+  ylab("AR")+
+  ylim(0,3)+
+  scale_color_discrete(name="Site")+
+  ggtitle ('Unscaled AR')
+#+
+  #facet_wrap(~ Site)
+gg4
+
+
+```
+
+```{r}
+gg1 <- ggplot(data = bd, aes(x=Site, y=AE, col = Treatment))+
+  geom_boxplot()+
+  #xlab("Site") + 
+  ylab("AE")+
+  ylim(0,1)+
+  scale_color_discrete(name="Site")+
+  ggtitle (' AE')#+
+   # facet_wrap(~ Site)
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=AE, col = Month))+
+  geom_point()+
+  #xlab("Site") + 
+  ylab("AE")+
+  ylim(0,1)+
+  scale_color_discrete(name="Site")+
+  ggtitle (' AE')+
+  facet_wrap(~ Site)
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AE, col = Month))+
+  geom_point()+
+  #xlab("Site") + 
+  ylab("AE")+
+  ylim(0,1)+
+  scale_color_discrete(name="Site")+
+  ggtitle (' AE')+
+    facet_wrap(~ Site)
+gg1
+
+
+```
+
+```{r}
+fit1 <- nlme::gnls(OER~ A*(Length/10)^B,
+           params = list(A~paste(Site,Month)-1, B~1), 
+           data=bd,
+           na.action = na.exclude,
+           start = list(A=c(1,1,1,1,1,1), B = .3 ))
+summary(fit1)
+
+# fit2 <- nlme::gnls(OER~ A*(Length/10)^B,
+#            params = list(A~paste(Site,Month)-1, B~paste(Site,Month)-1),
+#            data=bd,
+#            na.action = na.exclude,
+#            start = list(A=c(1,1,1,1,1,1), B = c(1,1,1,1,1,1) ))
+# summary(fit2)
+
+fit3 <- nlme::gnls(OER~ A*(Length/10)^B,
+           params = list(A~1, B~1), 
+           data=bd,
+           na.action = na.exclude,
+           start = list(A=1, B = .3 ))
+summary(fit1)
+summary(fit3)
+AIC(fit1,fit3)
+BIC(fit1,fit3)
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=OER, color = paste(Site,Month)))+
+  geom_point()+
+  #xlab("Dry weight") + 
+  #ylab("ORR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('ORR as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 2)),
+    se = FALSE
+  ) +
+  facet_wrap(~ paste(Site,Month))
+
+gg1
+```
+
+CR is scaled in excel spreadsheet, so to unscale it multiply it... and then here I'm looking at the relationship between length and unscaled CR... I'm not getting a value of 2...
+
+```{r}
+fit1 <- nlme::gnls(CR*Dry.weight^.76~ A*(Length/10)^B,
+           params = list(A~paste(Site,Month)-1, B~1), 
+           data=bd,
+           na.action = na.exclude,
+           start = list(A=c(1,1,1,1,1,1), B = .3 ))
+summary(fit1)
+
+fit2 <- nlme::gnls(CR*Dry.weight^.76~ A*(Length/10)^B,
+           params = list(A~paste(Site,Month)-1, B~paste(Site,Month)-1),
+           data=bd,
+           na.action = na.exclude,
+           start = list(A=c(1,1,1,1,1,1), B = c(1,1,1,1,1,1) ))
+summary(fit2)
+
+fit3 <- nlme::gnls(CR*Dry.weight^.76~ A*(Length/10)^B,
+           params = list(A~1, B~1), 
+           data=bd,
+           na.action = na.exclude,
+           start = list(A=1, B = .3 ))
+summary(fit1)
+summary(fit3)
+AIC(fit1,fit3)
+BIC(fit1,fit3)
+
+gg1 <- ggplot(data = bd, aes(x=Length/10, y=CR*Dry.weight^.76, color = paste(Site,Month)))+
+  geom_point()+
+  #xlab("Dry weight") + 
+  #ylab("ORR")+
+  #ylim(0,9)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('ORR as a function of DW')+
+  stat_smooth(
+    method = 'nls',
+    formula = y ~ A * x^B,
+    method.args = list(start = c(A = 2.3, B = 2)),
+    se = FALSE
+  ) +
+  facet_wrap(~ paste(Site,Month))
+
+gg1
+```

@@ -1,0 +1,27 @@
+,,,,,YSI,,,pH meter,,Tris,,,,,Carbonate chem bottle samples,,,,
+Month,Site,,Time,Sample type,Temp_YSI_handheld,DOmg/L,Sal,Temp_pH,pH,Tris temp,Tris pH,Offset,Corrected pH,Bottle collection,TA corrected (mm/kg SW),TCO2 (mm/kgS W),pH (chosen scale,Temp_SW,Notes
+September,Provincetown,9/10/22,8:44AM,Biodeposition measurement or bottle sample,16.9,7.18,33.37,17,7.985,19.8,8.326,0.068,7.917,8:45 AM,2157.03,2035.57,7.7528,17,
+September,Provincetown,9/10/22,9:00AM,Biodeposition measurement or bottle sample,,,,17.2,7.974,19.8,8.326,0.068,7.906,10:10 AM,2151.75,2014.04,7.8026,17.2,
+September,Provincetown,9/10/22,10:10AM,Biodeposition measurement or bottle sample,17.4,7.49,33.21,17.5,7.929,19.8,8.326,0.068,7.861,,,,,17.5,
+September,Provincetown,9/10/22,11:33AM,Biodeposition measurement or bottle sample,17.5,8,33.72,17.8,8.018,19.8,8.326,0.068,7.950,11:30 AM,2154.02,1999.97,7.8243,17.8,
+September,Eel Pond,9/12/2022,10:00AM,Biodeposition measurement or bottle sample,22.7,6.51,33.14,22.8,7.889,19.8,8.326,0.068,7.821,10:00 AM,1977.04,1876.95,7.7132,22.8,
+September,Eel Pond,9/12/2022,11:00AM,Biodeposition measurement or bottle sample,22.7,6.78,33.2,22.8,7.911,19.8,8.326,0.068,7.843,11:00 AM,1976.24,1876.01,7.6946,22.8,
+September,Eel Pond,9/12/2022,12:00AM,Biodeposition measurement or bottle sample,22.7,6.63,33.24,22.9,7.91,19.8,8.326,0.068,7.842,,,,,22.9,
+September,Eel Pond,9/12/2022,1:30PM,Biodeposition measurement or bottle sample,22.7,6.91,33.25,22.9,7.896,19.8,8.326,0.068,7.828,1:45 PM,1987.61,1878.00,7.7424,22.9,Corrected Temp_pH - ER 12/7/2023
+April,Provincetown,4/18/2023,1:11 PM,Biodeposition measurement or bottle sample,11.5,9.44,31.8,,,,,,,1:08 PM,,1992.53,,11.5,pH meter not recording this day. No pH or TA measured from bottle samples. 
+April,Provincetown,4/18/2023,2:15 PM,Biodeposition measurement or bottle sample,11.3,9.55,31.61,,,,,,,,,,,11.3,pH meter not recording this day. No pH or TA measured from bottle samples. 
+April,Provincetown,4/18/2023,2:55 PM,Biodeposition measurement or bottle sample,12.5,9.49,31.98,,,,,,,2:55 PM,,1975.13,,12.5,pH meter not recording this day. No pH or TA measured from bottle samples. 
+April,Provincetown,4/17/2023,,"Alk from previous day, monitoring, bottle 432, Ptown M BW, 4/17/23",,,31.4,13.9,8.138,12.3,8.602,0.098,8.040,,2184.79,1942.52,,11.8,
+April,Eel Pond,4/20/2023,10:26 AM,Biodeposition measurement or bottle sample,12,9.38,31.43,11.3,8.097,11.0,8.643,0.095,8.002,10:15 AM,,2015.57,,11.3,No pH or TA measured from bottle samples. 
+April,Eel Pond,4/20/2023,10:50 AM,Biodeposition measurement or bottle sample,,,,,8.080,11.0,8.643,0.095,7.985,,,,,,No pH or TA measured from bottle samples. 
+April,Eel Pond,4/20/2023,12:44 PM,Biodeposition measurement or bottle sample,12.6,9.42,31.09,11.8,8.086,11.0,8.643,0.095,7.991,,,,,11.8,No pH or TA measured from bottle samples. 
+April,Eel Pond,4/20/2023,1:39 PM,Biodeposition measurement or bottle sample,12.2,9.37,31.48,12.2,8.071,11.0,8.643,0.095,7.976,1:30 PM,,2006.00,,12.2,No pH or TA measured from bottle samples. 
+April,Eel Pond,4/19/2023,,"Alk from previous day, monitoring, bottle 441, Eel M BW",,,30,15.1,8.021,11.0,8.643,0.095,7.926,,2204.25,1990.89,,12.3,
+June,Provincetown,6/12/2023,10:05 AM,Biodeposition measurement or bottle sample,17.8,8.94,31.13,17.2,8.359,20.1,8.368,0.120,8.239,10:10 AM,2065.84,1795.52,8.1720,17.2,
+June,Provincetown,6/12/2023,11:09 AM,Biodeposition measurement or bottle sample,18.5,9.09,31.15,17.4,8.365,20.1,8.368,0.120,8.245,,,,,17.4,
+June,Provincetown,6/12/2023,12:06 PM,Biodeposition measurement or bottle sample,18.9,8.79,31.03,17.9,8.325,21.4,8.324,0.117,8.208,,,,,17.9,
+June,Provincetown,6/12/2023,1:02 PM,Biodeposition measurement or bottle sample,19.5,8.63,31.28,18.6,8.267,21.4,8.324,0.117,8.150,1:00 PM,2069.93,1832.84,8.1810,18.6,
+June,Eel Pond,6/10/2023,10:56 AM,Biodeposition measurement or bottle sample,18.5,7.69,31.57,18.5,7.945,20.8,8.362,0.136,7.809,11:10 AM,2068.82,1918.33,7.8570,18.5,
+June,Eel Pond,6/10/2023,11:43 AM,Biodeposition measurement or bottle sample,18.8,7.53,31.41,18.7,7.925,20.8,8.362,0.136,7.789,,,,,18.7,
+June,Eel Pond,6/10/2023,12:54 PM,Biodeposition measurement or bottle sample,18.8,8.17,31.65,18.8,7.997,20.8,8.362,0.136,7.861,,,,,18.8,
+June,Eel Pond,6/10/2023,1:11 PM,Biodeposition measurement or bottle sample,18.8,8.23,31.62,18.8,8.004,20.8,8.362,0.136,7.868,1:00 PM,2062.84,1891.40,7.8920,18.8,

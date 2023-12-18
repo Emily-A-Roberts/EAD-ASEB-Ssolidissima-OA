@@ -1,0 +1,133 @@
+---
+title: "Biodeposition_SW_data"
+#format: html
+editor: visual
+date: "2023-12-08"
+author: "Emily Roberts"
+subtitle: "SW conditions during biodeposition"
+
+
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+---
+
+```{r}
+#| include: FALSE
+require(ggplot2)
+require(ggpubr)
+require(dplyr)
+require(lubridate)
+library(knitr)
+library(kableExtra)
+
+# working directories
+wd_Biodep <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data/"
+
+```
+
+```{r}
+filename <- "Biodeposition_experiment_summary - Carbonate chem_calc.csv"
+df <- read.csv(paste(wd_Biodep,filename, sep = ""), stringsAsFactors = F, skip = 1)
+df$Month <- factor(df$Month, levels=c("September", "April", "June"))
+levels(df$Month) <- c("Sept", "April", "June")
+df$Site <- factor(df$Site, levels=c("Eel Pond", "Provincetown"))
+levels(df$Site) <- c("Eel", "Prov")
+```
+
+To estimate pH uncertainty I used this error propagation description on this website: [Error Propagation tutorial (foothill.edu)](https://foothill.edu/psme/daley/tutorials_files/10.%20Error%20Propagation.pdf), page 5. Essentially, I calculate the SD and mean hydrogen ion concentration such that SD(pH) = SD(\[H+\])/(2.303\*mean(\[H+\]).
+
+```{r}
+#| label: ave_SW_chem
+df$hydrogen_ion_conc <- 10^(-df$pH.out)
+
+df_summary <- df %>% 
+  group_by(Month, Site) %>% 
+  summarise(
+            Temp = round(mean(Temp.of.in.situ.seawater, na.rm = TRUE),1),
+            Temp_SE = round(sd(Temp.of.in.situ.seawater, na.rm = TRUE) / 
+                      sqrt(sum(!is.na(Temp.of.in.situ.seawater))),1),
+            Sal = round(mean(Sal, na.rm = TRUE),1),
+            Sal_SE = round(sd(Sal, na.rm = TRUE) / sqrt(sum(!is.na(Sal))),1),
+            pH = round(-log10(mean(hydrogen_ion_conc, na.rm = TRUE)), 3),
+            pH_SE = round((sd(hydrogen_ion_conc, na.rm = TRUE)/
+                     (2.303*mean(hydrogen_ion_conc, na.rm = TRUE)))/
+                        sqrt(sum(!is.na(hydrogen_ion_conc))),3),
+            TCO2 = round(mean(TCO2..mm.kgS.W., na.rm = TRUE),1),
+            TCO2_SE = round(sd(TCO2..mm.kgS.W., na.rm = TRUE) / 
+                      sqrt(sum(!is.na(TCO2..mm.kgS.W.))), 1),
+            TA_meas = round(mean(TA.corrected..mm.kg.SW., na.rm = TRUE),1),
+            TA_meas_SE = round(sd(TA.corrected..mm.kg.SW., na.rm = TRUE) / 
+                         sqrt(sum(!is.na(TA.corrected..mm.kg.SW.))), 1),
+            pCO2 = round(mean(pCO2.out..matm., na.rm = TRUE),1),
+            pCO2_SE = round(sd(pCO2.out..matm., na.rm = TRUE) / 
+                      sqrt(sum(!is.na(pCO2.out..matm.))), 1),
+            arag.sat = round(mean(Omega.aragonite, na.rm = TRUE),2),
+                arag_sat_SE = round(sd(Omega.aragonite, na.rm = TRUE) / 
+                          sqrt(sum(!is.na(Omega.aragonite))), 2)
+            )
+
+
+kable(df_summary)
+```
+
+I used the following to add grouped columns to the table [Create Awesome HTML Table with knitr::kable and kableExtra (r-project.org)](https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html) and [Replace column names in kable/R markdown - Stack Overflow](https://stackoverflow.com/questions/51432502/replace-column-names-in-kable-r-markdown)
+
+```{r}
+#dim(df_summary)
+# names(df_summary) <- c("Month",
+#                       "Site",
+#                       "Temp Mean",
+#                       "Temp SE",
+#                       "Sal Mean",
+#                       "Sal SE",
+#                       "pH Mean",
+#                       "pH SE",
+#                       "TCO2 Mean",
+#                       "TCO2 SE",
+#                       "TA Mean",
+#                       "TA SE",
+#                       "pCO2 Mean",
+#                       "pCO2 SE",
+#                       "Aragonite Sat Mean",
+#                       "Aragonite Sat SE")
+str(df_summary)
+kbl(df_summary[,2:16], col.names = c(
+                      "Site",
+                      "Mean",
+                      "SE",
+                      "Mean",
+                      "SE",
+                      "Mean",
+                      "SE",
+                      "Mean",
+                      "SE",
+                      "Mean",
+                      "SE",
+                      "Mean",
+                      "SE",
+                      "Mean",
+                      "SE")
+      ) %>%
+  kable_minimal() %>%
+  add_header_above(c(" " = 1, 
+                     "Temp" = 2,
+                     "Sal" = 2,
+                     "pH" = 2,
+                     "TCO2" = 2,
+                     "TA" = 2,
+                     "pCO2" = 2,                    
+                     "$\\Omega$ ar" = 2)) %>%
+  kable_paper( full_width = F) %>%
+  kableExtra::pack_rows("September", 1, 2) %>%
+  pack_rows("April", 3, 4)%>%
+  pack_rows("June", 5, 6)
+#%>% 
+#  kable_styling(latex_options="scale_down")
+```
+
+```{r}
+write.csv(df_summary, paste(wd_Biodep,"Output/SW_cond_averages.csv", sep = ""))
+```

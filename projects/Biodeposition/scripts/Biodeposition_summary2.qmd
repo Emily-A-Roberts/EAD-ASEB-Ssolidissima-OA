@@ -17,7 +17,7 @@ When you click the **Render** button a document will be generated that includes 
 library(ggplot2)
 library(ggpubr)
 library(data.table)
-setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
 
 bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
 
@@ -36,6 +36,11 @@ mean(bd$Length)
 New size scaling
 
 ```{r}
+bd$CR_unscaled <- bd$CR * (bd$Dry.weight^.76)
+bd$AR_unscaled <- bd$AR * (bd$Dry.weight^.76)
+bd$RR_unscaled <- bd$RR * (bd$Dry.weight^.76)
+
+
 bd$CR_len.scaled <- bd$CR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$AR_len.scaled <- bd$AR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
@@ -45,6 +50,8 @@ bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 CR
 
 ```{r}
+
+
 gg1 <- ggplot(data = bd, aes(x=Length, y=CR_len.scaled, color = Month))+
   geom_point(aes(shape=Treatment))+
   #xlab("Dry weight") + 
@@ -71,56 +78,43 @@ gg1 <- ggplot(data = bd, aes(x=Length, y=Dry.weight, color = Month))+
 gg1
 ```
 
-Check out new scaling from QC and subsetting Emilien's data to include clams \>20mm and June and July datasets only
+Now plotting unscaled values
 
 ```{r}
-gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=OER/Dry.weight^.43, color = Month))+
+gg1 <- ggplot(data = bd, aes(x=Length, y=CR_unscaled, color = Month))+
   geom_point(aes(shape=Treatment))+
-  xlab("Dry weight") + 
-  #ylab("OER new scaling")+
-  #ylim(0,9)+
-  #scale_color_discrete(name="Site")+
-  #ggtitle ('OER as a function of DW')+
+  #xlab("Dry weight") + 
   facet_wrap(~ Site)
 
 gg1
 
-gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=IER/Dry.weight^.59, color = Month))+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AR_unscaled, color = Month))+
   geom_point(aes(shape=Treatment))+
-  xlab("Dry weight") + 
- # ylab("IER")+
-  #ylim(0,9)+
-  #scale_color_discrete(name="Site")+
-  #ggtitle ('OER as a function of DW')+
+  #xlab("Dry weight") + 
   facet_wrap(~ Site)
 
 gg1
 
 
-gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=ORR, color = Month))+
-  geom_point(aes(shape=Treatment))+
-  xlab("Dry weight") + 
-  #ylab("ORR")+
-  #ylim(0,9)+
-  #scale_color_discrete(name="Site")+
-  #ggtitle ('OER as a function of DW')+
-  facet_wrap(~ Site)
-gg1
-
-gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=IRR, color = Month))+
-  geom_point(aes(shape=Treatment))+
-  xlab("Dry weight") + 
- # ylab("IRR")+
-  #ylim(0,9)+
-  #scale_color_discrete(name="Site")+
-  #ggtitle ('OER as a function of DW')+
-  facet_wrap(~ Site)
-
-gg1
 ```
 
+I want to redo the following graph but instead of TPM it should be TPM of seawater. I need to add some columns to the dataset to do this analysis.
+
 ```{r}
 
+gg1 <- ggplot(data = bd, aes(x=TPM, y=CR_len.scaled, color = Site))+
+  geom_point(aes(shape=Month))#+
+  #xlab("Dry weight") #+ 
+  #facet_wrap(~ Site)
+
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=TPM, y=AR_len.scaled, color = Site))+
+  geom_point(aes(shape=Month))#+
+  #xlab("Dry weight") + 
+  #facet_wrap(~ Site)
+
+gg1
 ```
 
 Now using length scaling
@@ -393,27 +387,27 @@ gg4
 ```{r}
 gg1 <- ggplot(data = bd, aes(x=Site, y=AE, col = Treatment))+
   geom_boxplot()+
-  xlab("Site") + 
+  #xlab("Site") + 
+  ylab("AE")+
+  ylim(0,1)+
+  scale_color_discrete(name="Site")+
+  ggtitle (' AE')#+
+   # facet_wrap(~ Site)
+gg1
+
+gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=AE, col = Month))+
+  geom_point()+
+  #xlab("Site") + 
   ylab("AE")+
   ylim(0,1)+
   scale_color_discrete(name="Site")+
   ggtitle (' AE')+
-    facet_wrap(~ Site)
+  facet_wrap(~ Site)
 gg1
 
-gg1 <- ggplot(data = bd, aes(x=Dry.weight, y=AE, col = Treatment))+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AE, col = Month))+
   geom_point()+
-  xlab("Site") + 
-  ylab("AE")+
-  ylim(0,1)+
-  scale_color_discrete(name="Site")+
-  ggtitle (' AE')+
-    facet_wrap(~ Site)
-gg1
-
-gg1 <- ggplot(data = bd, aes(x=Length, y=AE, col = Treatment))+
-  geom_point()+
-  xlab("Site") + 
+  #xlab("Site") + 
   ylab("AE")+
   ylim(0,1)+
   scale_color_discrete(name="Site")+

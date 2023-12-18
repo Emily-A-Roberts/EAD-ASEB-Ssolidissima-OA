@@ -19,7 +19,7 @@ library(ggplot2)
 library(ggpubr)
 library(data.table)
 library(nlme)
-setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/data")
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
 
 bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
 ```
