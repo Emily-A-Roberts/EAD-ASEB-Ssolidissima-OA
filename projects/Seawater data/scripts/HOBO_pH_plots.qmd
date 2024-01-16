@@ -301,6 +301,7 @@ setwd(wdPtown)
 ```{r}
 setwd(wdEel)
 filenames <- dir()
+filenames
 ```
 
 ```{r}
@@ -502,6 +503,32 @@ data_combined <- rbind(data_combined,data_combined_new)
 setwd(wdEel)
 # April
 #(open_file <- filenames[3])
+open_file <-"21333340_Eel_Pond 2023-04-14 15_22_46 EDT (Data EDT)(1).csv"
+
+df <- read.csv(open_file, stringsAsFactors = F)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST.EDT., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+plot(df$datetime, df$Ch.3...pH....pH.)
+#df <- df[df$datetime>"2023-04-19 17:00:00 EDT",]
+#df <- df[df$datetime<"2022-12-05 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C., type = "l")
+plot(df$Ch..1...Temperature.....C., df$Ch..3...pH....pH., pch = '.')
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C.,
+  pH = df$Ch..3...pH....pH.
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdEel)
+# April
+#(open_file <- filenames[3])
 open_file <- "21333340_Eel_Pond 2023-05-08 09_10_54 EDT (Data EDT).csv"
 
 df <- read.csv(open_file, stringsAsFactors = F)
@@ -554,21 +581,33 @@ dir()
 tides.Ptown1 <- read.table("Ptown_Jul.txt", skip =14)
 tides.Ptown2 <- read.table("Ptown_Aug.txt", skip =14)
 tides.Ptown3 <- read.table("Ptown_Sep.txt", skip =14)
+tides.Ptown4 <- read.table("Ptown_Oct.txt", skip =14)
+tides.Ptown5 <- read.table("Ptown_Nov.txt", skip =14)
+tides.Ptown6 <- read.table("Ptown_Dec.txt", skip =14)
+tides.Ptown7 <- read.table("Ptown_Apr23.txt", skip =14)
+tides.Ptown8 <- read.table("Ptown_May23.txt", skip =14)
+tides.Ptown9 <- read.table("Ptown_Jun23.txt", skip =14)
 tides.Den1 <- read.table("Den_Jul.txt", skip =14)
 tides.Den2 <- read.table("Den_Aug.txt", skip =14)
 tides.Den3 <- read.table("Den_Sep.txt", skip =14)
 tides.Eel1 <- read.table("Hyannis_Jul.txt", skip =14)
 tides.Eel2 <- read.table("Hyannis_Aug.txt", skip =14)
 tides.Eel3 <- read.table("Hyannis_Sep.txt", skip =14)
+tides.Eel4 <- read.table("Hyannis_Oct.txt", skip =14)
+tides.Eel5 <- read.table("Hyannis_Nov.txt", skip =14)
+tides.Eel6 <- read.table("Hyannis_Dec.txt", skip =14)
+tides.Eel7 <- read.table("Hyannis_Apr23.txt", skip =14)
+tides.Eel8 <- read.table("Hyannis_May23.txt", skip =14)
+tides.Eel9 <- read.table("Hyannis_Jun23.txt", skip =14)
 
-tides.Ptown <- rbind(tides.Ptown1, tides.Ptown2, tides.Ptown3)
+tides.Ptown <- rbind(tides.Ptown1, tides.Ptown2, tides.Ptown3, tides.Ptown4, tides.Ptown5, tides.Ptown6, tides.Ptown7, tides.Ptown8, tides.Ptown9)
 tides.Den <- rbind(tides.Den1, tides.Den2, tides.Den3)
-tides.Eel <- rbind(tides.Eel1, tides.Eel2, tides.Eel3)
+tides.Eel <- rbind(tides.Eel1, tides.Eel2, tides.Eel3, tides.Eel4, tides.Eel5, tides.Eel6, tides.Eel7, tides.Eel8, tides.Eel9)
 
 tides <- data.frame(tides = rbind(tides.Ptown,tides.Den,tides.Eel),
            Site = as.factor(c(rep("Ptown",times=nrow(tides.Ptown)),
-                     rep("Den",times=nrow(tides.Ptown)),
-                     rep("Eel",times=nrow(tides.Ptown)))))
+                     rep("Den",times=nrow(tides.Den)),
+                     rep("Eel",times=nrow(tides.Eel)))))
 names(tides)<- c("date","day","Time","Tideheight","Site")
 
 Date1 <- paste(tides$date,tides$Time,sep=" ")
@@ -630,7 +669,7 @@ plot(pH~Temp,  pch =".",type ="b", data = Eel)
 
 Ptown <- Ptown[Ptown$Tideheight>0.4,]
 Den <- Den[Den$Tideheight>0.5,]
-Eel <- Eel[Eel$Tideheight>0,]
+Eel <- Eel[Eel$Tideheight>0,] 
 
 ```
 
@@ -638,13 +677,16 @@ Eel <- Eel[Eel$Tideheight>0,]
 # Aggregate data --------------------------------------------------------------
 
 Ptown.hr <- aggregate(Ptown[,c("pH","Temp")], 
-                         list(Date = cut(Ptown[,c("Date")], breaks="day")), 
+                         list(Date = cut(Ptown[,c("Date")], 
+                                         breaks="day")), 
                          mean, na.rm = TRUE)
 Den.hr <- aggregate(Den[,c("pH","Temp")], 
-                      list(Date = cut(Den[,c("Date")], breaks="day")), 
+                      list(Date = cut(Den[,c("Date")], 
+                                      breaks="day")), 
                       mean, na.rm = TRUE)
 Eel.hr <- aggregate(Eel[,c("pH","Temp")], 
-                      list(Date = cut(Eel[,c("Date")], breaks="day")), 
+                      list(Date = cut(Eel[,c("Date")], 
+                                      breaks="day")), 
                       mean, na.rm = TRUE)
 
 all.data.hr <- data.frame(
@@ -656,27 +698,33 @@ all.data.hr <- data.frame(
 all.data.hr$Date<- as.POSIXct(all.data.hr$Date)
 head(all.data.hr)
 
+# Add in NA's in between the two timepoints so that ggplot doesn't draw a line between points. 
+df.na <- data.frame(
+  Date = c("2023-01-01 EST","2023-01-01 EST","2023-01-01 EST"),
+  pH = c(NA,NA,NA),
+  Temp = c(NA,NA,NA),
+  Site = c("Ptown","Dennis","Eel")
+)
+
+all.data.hr <- rbind(all.data.hr,df.na)
 ```
 
+Plot tides
+
 ```{r}
-# Plot        --------------------------------------------------------------
-
-# plot(all.data$Date, all.data$pH, 
-#      color = as.factor(data_combined$Site), pch = ".")
-
 sampling.pH <- data.frame(
-  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT")),
-  y = c(7.5,7.5,7.5)
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-01 00:00:00 EDT")),
+  y = c(7.5,7.5,7.5,7.5,7.5,7.5)
 )
 sampling.temp <- data.frame(
-  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT")),
-  y = c(14,14,14)
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-01 00:00:00 EDT")),
+  y = c(5,5,5,5,5,5)
 )
 
 theme_set(theme_bw())
 
 colors <- c(
-  "Dennis"="blue",
+  "Den"="blue",
   "Eel"="green",
   "Ptown"="orange",
   "Date sampled"="black"
@@ -692,7 +740,7 @@ gg1 <- ggplot(all.data.hr, aes(x=Date, y=pH, colour = Site))+
   geom_point(cex = 1) +
   geom_line(cex = 1)+
   ylim(7.5,8.3)+
-  xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
+  #xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
   geom_point(data = sampling.pH, aes(x,y), color = "black", cex = 5)+
   scale_color_manual(values=colors) +
   guides(colour = guide_legend(override.aes = list(size=5)))+
@@ -705,8 +753,8 @@ gg2 <- ggplot(all.data.hr, aes(x=Date, y=Temp, colour = Site))+
   geom_point(cex = 1) +
   geom_line(cex = 1)+
   labs(y=ylab)+
-  ylim(14,30)+
-  xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
+  #ylim(14,30)+
+  #xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
   geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 5)+
   scale_color_manual(values=colors) +
   guides(colour = guide_legend(override.aes = list(size=5)))+
@@ -714,7 +762,7 @@ gg2 <- ggplot(all.data.hr, aes(x=Date, y=Temp, colour = Site))+
 
 
 
-ggarrange(gg2, gg1, common.legend = TRUE, legend="bottom")
+ggarrange(gg2, gg1, common.legend = FALSE, legend="bottom")
 #
 ```
 

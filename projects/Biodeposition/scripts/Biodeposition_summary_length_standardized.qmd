@@ -16,6 +16,7 @@ library(data.table)
 library(kableExtra)
 library(knitr)
 setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data"
 
 bd <- fread("Biodeposition_experiment_summary - Biodeposition_results.csv")
 
@@ -34,6 +35,20 @@ bd$CR_len.scaled <- bd$CR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$AR_len.scaled <- bd$AR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$CI <- bd$Dry.weight/(bd$Length^3)
+
+bd$RR
+bd <- bd[bd$AE>0,]
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=AE, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  #ylab("organic content of water (mg/L)")+
+  #ylim(0,1)+
+  #scale_color_discrete(name="Site")+
+  #ggtitle ('OER as a function of DW')+
+  facet_wrap(~ Site)
+
+gg1
 ```
 
 ```{r}
@@ -159,6 +174,47 @@ gg_CR
 ```
 
 ```{r}
+model_means <- emmeans(lm(RR~Month*Site, data = bd), ~ Month * Site, data = bd)
+summary(lm(RR~Month*Site, data = bd))
+ 
+# show differences
+pairs(model_means, adjust = "Tukey", alpha = 0.05)
+#> P value adjustment: tukey method for comparing a family of 3 estimates
+
+# add letters to each mean
+cld_out <- cld(object = model_means,
+    adjust = "Tukey",
+    Letters = letters,
+    alpha = 0.05)
+ 
+
+cld_out <- as.data.frame.list(cld_out)
+
+int_name <- interaction(cld_out$Month, cld_out$Site)
+library(tidyverse)
+  my_x_labels <- setNames(nm = c("June.Provincetown","April.Eel Pond","June.Eel Pond", "April.Provincetown","September.Eel Pond","September.Provincetown"),
+                            c("Prov","Eel","Eel","Prov", "Eel", "Prov"))
+
+str(model_means)
+ylab_text <- expression(paste("RR (mg  ",hr^-1, ")"))
+# Create a ggplot
+gg_RR <- ggplot(data = as.data.frame(cld_out), 
+            aes(x = interaction(Month, Site), y = emmean, fill = Month)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = emmean + SE, ymax = emmean - SE), width = 0.2, position = position_dodge(0.9)) +
+  labs(x = "Site and Month", y = ylab_text)+
+    ylim(c(0,2.5))+
+  #theme_minimal(legend.position = "none")+
+  geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
+  theme_classic()+
+  scale_x_discrete(labels = my_x_labels) + 
+  scale_fill_brewer(palette="Set2")
+gg_RR
+
+RR_scaled_emmeans <- cld_out
+```
+
+```{r}
 # get (adjusted) weight means per group
 model_means <- emmeans(lm(AR_len.scaled~Month*Site, data = bd), ~ Month * Site, data = bd)
  
@@ -194,6 +250,135 @@ gg_AR <- ggplot(data = as.data.frame(cld_out),
   theme_classic()+
   scale_x_discrete(labels = my_x_labels) + 
   scale_fill_brewer(palette="Set2")
+gg_AR
+
+AR_len_scaled_emmeans <- cld_out
+```
+
+## Grab DEB data and do a regression with observed AR and predicted assimilation rate.
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data/output/"
+SW_DEB <- read.csv(paste(data_dir,"Ingestion_pred_from_DEB.csv",sep=""),stringsAsFactors = FALSE)
+
+
+SW_DEB$Month[SW_DEB$Month=="Sept"] <- "September"
+SW_DEB$Site[SW_DEB$Site=="Eel"] <- "Eel Pond"
+SW_DEB$Site[SW_DEB$Site=="Prov"] <- "Provincetown"
+
+
+head(SW_DEB)
+head(AR_len_scaled_emmeans)
+
+df.new <- merge(SW_DEB, AR_len_scaled_emmeans, by = c("Site","Month"))
+head(df.new)
+
+
+summary(lm(df.new$emmean~df.new$Pred_ingestion))
+
+str(df.new)
+
+df.new <- df.new[df.new$emmean>.4,]
+plot(df.new$emmean~df.new$Pred_ingestion)
+summary(lm(df.new$emmean~df.new$Pred_ingestion))
+
+
+```
+
+```{r}
+head(bd)
+head(SW_DEB)
+df.new <- merge(bd, SW_DEB, by = c("Site","Month"))
+plot(df.new$AR_len.scaled~df.new$Pred_ingestion)
+summary(lm(df.new$AR_len.scaled~df.new$Pred_ingestion))
+ggplot(df.new, aes(Pred_ingestion/24, AR_len.scaled)) +
+  geom_point(aes(colour = Temp))+
+  ylab("Observed absorbance rate (mg / hr)")+
+  xlab("Predicted assimilation rate (J / hr)") +
+    geom_smooth(method='lm')
+
+df.new$pCO2
+ggplot(df.new, aes(pCO2, AR_len.scaled)) +
+  geom_point(aes(colour = Temp))+
+  ylab("Observed absorbance rate (mg / hr)")+
+  xlab("Predicted assimilation rate (J / hr)") +
+    geom_smooth(method='lm')
+
+
+
+library(psych)
+pairs.panels(
+  df.new[,c("AR_len.scaled", "Pred_ingestion", "Temp", "arag.sat")], 
+  method = "pearson", # correlation method
+  hist.col = "#00AFBB",
+  density = TRUE, # show density plots
+  lm = TRUE # plot the linear fit
+)
+
+mod.new <- lm(data = df.new, AR_len.scaled ~ Pred_ingestion + pCO2 + arag.sat)
+summary(mod.new)
+
+mod.new <- lm(data = df.new, AE ~ Pred_ingestion + arag.sat )
+summary(mod.new)
+
+intercept_only <- lm(AR_len.scaled ~ 1, data=df.new[,c("AR_len.scaled","Pred_ingestion", "TA_meas", "pCO2", "Length")])
+all <- lm(AR_len.scaled ~ ., data=df.new[,c("AR_len.scaled","Pred_ingestion",  "TA_meas", "pCO2",  "Length")])
+both <- step(intercept_only, direction='both', scope=formula(all), trace=0)
+both$anova
+both$coefficients
+
+
+model1 <- lm(AR_len.scaled ~ 1, data=df.new[,c("AR_len.scaled","Pred_ingestion", "TA_meas", "pCO2", "Length")])
+model2 <- lm(AR_len.scaled ~ Pred_ingestion, data=df.new[,c("AR_len.scaled","Pred_ingestion", "TA_meas", "pCO2", "Length")])
+model3 <- lm(AR_len.scaled ~ pCO2, data=df.new[,c("AR_len.scaled","Pred_ingestion", "TA_meas", "pCO2", "Length")])
+model4 <- lm(AR_len.scaled ~ Pred_ingestion + pCO2, data=df.new[,c("AR_len.scaled","Pred_ingestion", "TA_meas", "pCO2", "Length")])
+
+library(AICcmodavg)
+models <- list(model1, model2, model3, model4)
+mod.names <- c("Intercept", "DEB Temp correction", "pCO2", "Both")
+aictab(cand.set = models, modnames = mod.names)
+
+#Both isn't significantly worse than pCO2 and temp
+summary(model2)
+
+library(corrplot)
+library(RColorBrewer)
+M <-cor(df.new[,c("Temp", "Sal", "TA_meas", "pCO2", "pH", "arag.sat")])
+corrplot(M, method = "number",type="upper", 
+         col=brewer.pal(n=8, name="RdYlBu"))
+
+
+M <-cor(na.omit(df.new[,c("AR_len.scaled","Temp", "Pred_ingestion",  "TA_meas", "pCO2")]))
+corrplot(M, method = "number", type="upper", 
+         col=brewer.pal(n=8, name="RdYlBu"))
+
+M <-cor(na.omit(df.new[,c("AR_len.scaled", "Pred_ingestion",  "TA_meas", "pCO2")]))
+corrplot(M, method = "number", type="upper", 
+         col=brewer.pal(n=8, name="RdYlBu"))
+
+df.new$Site <- factor(df.new$Site, levels=c ('Provincetown', "Eel Pond"))
+
+gg_temp_pCO2 <- ggplot(data = df.new, 
+            aes(x = Temp, y = pCO2)) +
+  geom_point(aes(colour = Site)) +
+  theme_minimal()+
+  theme_classic()+
+  scale_fill_brewer(palette="Set2")
+gg_temp_pCO2
+
+
+gg_temp_TA<- ggplot(data = df.new, 
+            aes(x = Temp, y = TA_meas)) +
+  geom_point(aes(colour = Site)) +
+  theme_minimal()+
+  theme_classic()+
+  scale_fill_brewer(palette="Set2")
+gg_temp_TA
+
+ggarrange(gg_temp_pCO2, gg_temp_TA,common.legend = TRUE)
+
+
+
 
 ```
 
@@ -232,7 +417,6 @@ gg_AE <- ggplot(data = as.data.frame(cld_out),
   theme_classic()+
   scale_x_discrete(labels = my_x_labels)+ 
   scale_fill_brewer(palette="Set2")
-
 
 ```
 

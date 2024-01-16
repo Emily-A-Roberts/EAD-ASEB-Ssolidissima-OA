@@ -23,6 +23,7 @@ Plot settings
 par(mar = c(1, 3.5, 1, 1))
 new.pal <- c(pal_jco()(10)[4],pal_jco()(10)[6],pal_jco()(10)[5],pal_jco()(10)[2],'grey57','grey80')
 #barplot(1:10, col = pal_jco()(10))
+new.pal <- c("blue","black","orange","red","green")
 
 ```
 
@@ -31,6 +32,9 @@ Read in data
 ```{r}
 dir1 <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/TSM and Chl/"
 filter_TSM<- read.csv(paste(dir1,"TSM and Chl data - TSM filters.csv",sep = ""), header = TRUE, stringsAsFactors = FALSE)
+
+filter_TSM <- filter_TSM[!is.na(filter_TSM$Site),]
+filter_TSM <- filter_TSM[!is.na(filter_TSM$Date),]
 
 # Separate out header row with unit information from dataframe
 unit <- filter_TSM[1,]
@@ -46,7 +50,7 @@ filter_TSM$Site.info <- filter_TSM$Site
 
 
 #Categorize site
-filter_TSM <- filter_TSM[!is.na(filter_TSM$Site)|!is.na(filter_TSM$Date),]
+
 filter_TSM <- filter_TSM[filter_TSM$Site!="Unknown"&filter_TSM$Site!="Popponesset Bay",] 
 filter_TSM$Site[filter_TSM$Site=="Cockle Cove"] <- "Chatham"
 filter_TSM$Site[filter_TSM$Site=="Cockle cove"] <- "Chatham"
@@ -62,6 +66,8 @@ filter_TSM$Site[filter_TSM$Site=="South st Dennis"] <- "Dennis"
 filter_TSM$Site[filter_TSM$Site=="Barn"] <- "Barnstable"
 filter_TSM$Site[filter_TSM$Site=="Barnstable Harbor"] <- "Barnstable"
 
+filter_TSM <- filter_TSM[!is.na(filter_TSM$Site),]
+filter_TSM <- filter_TSM[filter_TSM$Site!="Nobscussett",]
 
 #Dataframe formatting
 filter_TSM$Site <- as.factor(filter_TSM$Site)
@@ -75,6 +81,12 @@ filter_TSM$TSM_mg.L <- as.numeric(filter_TSM$TSM_mg.L)
 filter_TSM <- filter_TSM[filter_TSM$POM..ug...L.>0,]
 #filter_TSM <- filter_TSM[filter_TSM$Date>as.Date("1/1/21", format = "%m/%d/%Y"),]
 filter_TSM$ChlPOMRatio <- filter_TSM$Chl.measured.ug.L/filter_TSM$AFDW.mg.L
+
+str(filter_TSM)
+filter_TSM$Site <- factor(filter_TSM$Site, levels=c('Barnstable', 'Dennis', 'Provincetown',"Chatham", "Eel Pond"))
+
+levels(filter_TSM$Site) <- c('N. Cape: Barnstable Harbor', 'N. Cape: East Dennis', 'N. Cape: Provincetown Bay', "S. Cape: Cockle Cove, Chatham", "S. Cape: Eel Pond E Falmouth")
+
 ```
 
 I'm skipping a quality control step for now of removing TSM's for filters that had aluminum oxide issues. This will probably increase perc org and decrease PIM.
@@ -154,14 +166,30 @@ p+labs(x="Date", y = "POM (mg/L)")+
 Monthly averages
 
 ```{r}
-df_month <- df_summary %>%
-group_by(Site,Month = lubridate::floor_date(Date.factor, "month")) %>%
-summarize(POM = mean(POM),
-          POM_SE = sqrt(sum(POM_SE^2)),
-          Chl = mean(Chl),
-          Chl_SE = sqrt(sum(Chl_SE^2)),
+# df_month <- df_summary %>%
+# group_by(Site,Month = lubridate::floor_date(Date.factor, "month")) %>%
+# summarize(POM = mean(POM),
+#           POM_SE = sqrt(sum(POM_SE^2)),
+#           Chl = mean(Chl),
+#           Chl_SE = sqrt(sum(Chl_SE^2)),
+# 
+#           )
+#filter_TSM$Date.factor
+df_month <- filter_TSM %>% 
+  group_by(Site,Month = lubridate::floor_date(as.Date(Date.factor), "month")) %>% 
+  summarise(
+            POM = round(mean(AFDW.mg.L, na.rm = TRUE),1),
+            
+            POM_SE = round(sd(AFDW.mg.L, na.rm = TRUE) / 
+                      sqrt(sum(!is.na(AFDW.mg.L))),1),
+            
+            Chl = round(mean(ChlPOMRatio, na.rm = TRUE),1),
 
-          )
+            Chl_SE = round(sd(ChlPOMRatio, na.rm = TRUE) / 
+                      sqrt(sum(!is.na(ChlPOMRatio))),1)
+            )
+
+df_month <- df_month[!is.na(df_month$Site),]
 
 p<- ggplot(df_month, aes(x=as.Date(Month), y=POM, group=Site, color=Site)) + 
   geom_line() +

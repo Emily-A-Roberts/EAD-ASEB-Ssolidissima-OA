@@ -714,12 +714,41 @@ for (j in 1:length(cT_vec)){
 Surface specific assimilation (I think) as a function of temperature
 
 ```{r}
-plot(Temp_vec-273,Pa_vec,type='p',
-         #ylim=c(0,20),xlim=c(0,25),
+
+Temp_vec_line <- seq(from = 10,to = 25, by =.01) +273
+
+cT_vec_line<-exp((Param$Ta /Param$T1)-(Param$Ta /Temp_vec_line)) *
+  (1+exp((Param$Tal/Param$T1)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Param$T1)))/
+  (1+exp((Param$Tal/Temp_vec_line)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Temp_vec_line))) 
+
+plot(Temp_vec_line-273,cT_vec_line)
+
+plot(Temp_vec-273,cT_vec,type='p',
+         ylim=c(0,1),xlim=c(10,25),
          #ylab=ylabel,cex.lab=2,
          xlab=expression(paste("Temp",degree," C")),cex.axis=1)
      #,xlim=c(0,length(Resultmean)/365+0.25))
-   #text(0,19.5,"(B)")
+   #text(0,19.5,"(B)")+
+#lines(Temp_vec_line-273,cT_vec_line)
+
+df.new <- data.frame(
+  Temp_vec_line=Temp_vec_line, 
+  cT_vec_line=cT_vec_line
+  )
+
+df.new.2 <- data.frame(
+  Temp_vec=Temp_vec, 
+  cT_vec=cT_vec
+  )
+
+head(df.new)
+ggplot(data = df.new, aes(x=Temp_vec_line-273, y=cT_vec_line)) +
+  geom_line( aes(colour = Temp_vec_line-273))+
+  ylab("Observed absorbance Rate (mg / hr)")+
+  xlab("Predicted assimilation Rate (J / hr)")
++
+  geom_point(data = df.new.2,aes(x=Temp_vec-273, y=cT_vec, colour = Temp_vec-273))
+  #geom_line(df.new.2, aes(colour = Temp_vec-273))
 ```
 
 ```{r}

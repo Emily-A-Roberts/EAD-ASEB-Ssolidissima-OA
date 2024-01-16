@@ -1,0 +1,333 @@
+---
+title: "transplant_growth_lengths_Sep_June23"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup1
+#| include: false
+library("ggplot2")
+library("nlme")
+library("MuMIn")
+library("dplyr")
+library("ggpubr")
+library("gridExtra")
+library(lme4)
+theme_set(theme_bw())
+```
+
+```{r}
+#| label: setup2
+
+#setwd("~/Surfclam datasheets")
+wd <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/"
+growth <- read.csv(file = paste(wd,"2022_2023_surfclam_transplant - All.csv",sep=""), stringsAsFactors = F)
+#growth <- growth[growth$Buried_Dec=="S"|is.na(growth$Buried_Dec),] Issue at Eel
+
+head(growth)
+growth <- growth[!is.na(growth$Collection.month),]
+growth$Elapsed_days <- as.numeric(growth$Elapsed_days)
+growth$Collection1_date <- as.Date(growth$Collection1_date, format = "%m/%d/%Y")
+growth$Site <- as.factor(growth$Site)
+growth$Collection.month <- factor(growth$Collection.month, levels = c("December", "April", "June"))
+
+
+plot(growth$L_mm/growth$H_mm~growth$H_mm)
+mean(growth$L_mm/growth$H_mm, na.rm = TRUE) #1.285
+
+
+#growth <- growth[!is.na(growth$L_mm/growth$H_mm)&(growth$L_mm/growth$H_mm)>1.1,] #QC check
+
+
+#Mark as alive or dead
+growth$AliveOrDead <- rep("Missing", nrow(growth))
+growth$AliveOrDead[is.na(growth$Tin.only)] <- "Dead"
+growth$AliveOrDead[!is.na(growth$Tin.only)] <- "Alive"
+
+growth_aliveANDdead <- growth
+growth <- growth[growth$AliveOrDead=="Alive",]
+growth <- growth[growth$Treatment!="Outside cage",]
+growth$Treatment <- as.factor(growth$Treatment)
+
+# QC
+growth[!is.na(growth$Height/growth$Len)&((growth$Height/growth$Len)>1|(growth$Height/growth$Len)<.7),]
+growth <- growth[(growth$Height/growth$Len)<1|(growth$Height/growth$Len)>.7,]
+
+
+growth$CI <- growth$Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues./(growth$Len^3)*1000000
+
+growth[growth$CI > 20,] #One bad data point. Dissection data must be in the wrong 
+ growth <- growth[!is.na(growth$CI),]
+
+```
+
+```{r}
+
+##------------------------------------------------------------
+##          I still need to fill in any QC'ed data          --
+##              with the ratio of length to height          --
+##  But first, I want to check the notebook / frozen clams  --
+##------------------------------------------------------------
+
+(growth[!is.na(growth$Start_len_mm),])
+#growth <- growth[!is.na(growth$L_mm),]
+#growth <- growth[growth$AliveOrDead=="L",]
+
+growth$len_tot <- growth$Len-growth$Start_len_mm
+growth$len_per_day <- growth$len_tot/growth$Elapsed_days
+
+growth$height_tot <- growth$Height-growth$Start_height_mm
+growth$height_per_day <- growth$height_tot/growth$Elapsed_days
+growth$ratio.LH <- growth$height_tot/growth$len_tot
+
+growth <- growth[growth$ratio.LH < 1 & growth$ratio.LH > 0,]
+
+mean(growth$len_tot, na.rm = TRUE)
+mean(growth$len_per_day, na.rm = TRUE)
+
+#growth[growth$len_tot<=0,"Len"]<- NA 
+
+```
+
+Plot total change in length as a function of starting length
+
+```{r}
+par(mfrow = c(1,1))
+plot(growth$Elapsed_days, growth$len_tot, color = growth$Site)
+plot(growth$Elapsed_days, growth$Start_len_mm)
+```
+
+## Ptown treatment comparison
+
+```{r}
+
+
+
+#Length change through December
+ growth <- growth[!is.na(growth$len_tot),]
+ mod_growth_full <- lme(len_tot/Elapsed_days*30~Treatment+Collection.month+Site,
+                        #*Collection.month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Location_code, 
+                        data = growth)
+ library(kableExtra)
+ summary(mod_growth_full)
+  # M_int<-update(mod_growth_full, .~. - Start_len_mm:Site)
+  # M <- update(M_int, ~. - Treatment:Site)
+  # M2 <- update(M_int, ~. - Start_len_mm)
+  # 
+#   summary(M_int)
+#   summary(M)
+#   summary(M2)
+# AIC(mod_growth_full,M_int,M,M2)
+
+
+
+
+ mod_growth_full.CI <- lme(CI~Treatment+Collection.month+Site,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Location_code, 
+                        data = growth)
+ summary(mod_growth_full.CI)
+# M_int<-update(mod_growth_full, .~. - Start_len_mm:Site)
+# M <- update(M_int, ~. - Treatment:Site)
+# M2 <- update(M_int, ~. - Start_len_mm)
+# 
+# summary(M_int)
+# summary(M)
+# summary(M2)
+# AIC(mod_growth_full,M_int,M,M2)
+#banner(snug = TRUE, bandChar = "-") # <--- create a small banner
+
+
+# Remove growth measurements that are <(-2)... There are none. 
+#growth_dec[growth_dec$growth_height<0,]
+#growth_dec <- growth_dec[growth_dec$growth_height>(-2),]
+
+```
+
+```{r}
+
+levels(growth$Collection.month) <- c("Dec", "Apr", "Jun")
+levels(growth$Treatment) <- c("Control","Shell addition")
+
+gg0 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=len_tot, color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Length")+
+  ylim(0,50)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Length')+
+  facet_wrap(facets = "Site")
+gg0
+
+gg1 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=len_tot/(Elapsed_days/30), color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Growth per month (mm/month)")+
+  ylim(0,9)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Growth')+
+  facet_wrap(facets = "Site")
+gg1
+
+
+gg2 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=(Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues.)/(Elapsed_days/30), color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Growth per month (AFDW mg/month)")+
+  ylim(0,.25)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Tissue weight')+
+  facet_wrap(facets = "Site")
+
+gg2
+
+
+gg3 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=CI, color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Condition index (mg / cm^3)")+
+  ylim(0,18)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Condition index')+
+  facet_wrap(facets = "Site")
+
+gg3
+
+gg4 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Height/Len, color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Height:Length allometric ratio")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Allometry')+
+  facet_wrap(facets = "Site")
+
+gg4
+
+gg5 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues./DW, color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("AFDW / DW")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Check')+
+  facet_wrap(facets = "Site")
+
+gg5
+
+ggarrange(gg0,gg1,gg3, ncol=3, common.legend = TRUE, legend = "right")
+
+ggarrange(gg1,gg3, ncol=2, common.legend = TRUE, legend = "right")
+
+
+```
+
+```{r}
+#---------- Plot for proposal
+# Pool treatments
+gg1 <- ggplot(data = growth_dec, aes(x=Site, y=len_tot/Elapsed_days))+
+  geom_boxplot()+
+  xlab("Site") + 
+  ylab("Growth (mm/day)")+
+  ylim(0,9/30)+
+  #scale_color_discrete(name="Shell hash addition")+
+  ggtitle ('Change in length Sep - Dec')
+gg1
+str(growth_dec)
+mod_growth_full <- lme(height_tot~Site+Start_len_mm+Start_len_mm:Site, 
+                       random = ~1|Location_code, data = growth)
+summary(mod_growth_full)
+M_int<-update(mod_growth_full, .~. - Start_len_mm:Site)
+M2 <- update(M_int, ~. - Start_len_mm)
+summary(M2)
+
+(P <- mean(growth$len_per_day[growth$Site=="Ptown"]))
+(E <- mean(growth$len_per_day[growth$Site=="Eel Pond"]))
+E/P
+(P-E)/E #Overall Provincetown clam growth rate was 50% higher than Eel Pond growth rate
+P/E
+
+(P <- mean(growth$CI[growth$Site=="Ptown"]))
+(E <- mean(growth$CI[growth$Site=="Eel Pond"]))
+E/P
+(P-E)/E #Overall Provincetown clam growth rate was 50% higher than Eel Pond growth rate
+P/E
+
+(P.dec <- mean(growth$CI[growth$Site=="Ptown"&growth$Collection.month=="Dec"], na.rm = TRUE))
+(P.apr <- mean(growth$CI[growth$Site=="Ptown"&growth$Collection.month=="Apr"], na.rm = TRUE))
+(P.jun <- mean(growth$CI[growth$Site=="Ptown"&growth$Collection.month=="Jun"], na.rm = TRUE))
+
+P.apr / P.dec
+
+(E.dec <- mean(growth$CI[growth$Site=="Eel Pond"&growth$Collection.month=="Dec"], na.rm = TRUE))
+(E.apr <- mean(growth$CI[growth$Site=="Eel Pond"&growth$Collection.month=="Apr"], na.rm = TRUE))
+E.apr /E.dec
+
+
+summary <- growth_dec %>%
+  group_by(Site) %>%
+  summarize(mean_len = mean(len_tot, na.rm = TRUE),
+            sd_len = sd(len_tot, na.rm = TRUE))
+
+
+
+gg2 <- ggplot(data = summary, aes(x=Site, y=mean_len))+
+  geom_bar()
+
+
+barplot(growth_dec$len_per_day~site)
+
++
+  xlab("Site") + 
+  #scale_color_discrete(name="Shell hash addition")+
+gg2
+
+
+```
+
+```{r}
+head(growth)
+
+growth <- growth_aliveANDdead 
+Alive_count <- growth %>% count(Treatment, Collection.month, Location_code, Site, AliveOrDead)
+head(Alive_count)
+mod_growth_full <- lme(n~Treatment*Collection.month, 
+                       random = ~1|Location_code, data = Alive_count)
+summary(mod_growth_full) # Not really answering my question but not differences in survival between treatments
+
+growth_dec$AliveOrDead
+(gm1 <- glmer(as.factor(AliveOrDead) ~ Treatment * Collection.month + Site + (1 | Location_code),
+              data = growth, family = binomial))
+summary(gm1) #Here there is an effect of treatment but it's still not answering my question about initial lengths
+
+#growth_dec$AliveOrDead[growth_dec$AliveOrDead=="Missing"]<- NA
+ p <- ggplot(Alive_count, aes(x = as.factor(Site), y = n/8, 
+                             color = Treatment))+
+   ylim(0,1)+
+   geom_boxplot()
+   
+ p
+ 
+# Generally high survival
+# p + geom_boxplot() + facet_grid(Site ~ .)
+# 
+# p <- ggplot(growth_dec, aes(x = Start_len_mm, y = AliveOrDead, 
+#                             color = Treatment))
+# p + geom_boxplot() + facet_grid(Site ~ .)
+```
+
+```{r}
+
+
+
+Alive <- as.data.frame(Alive_count[Alive_count$AliveOrDead=="Alive",])
+Alive$perc_alive <- Alive$n/9*100
+Alive
+```
+
+```{r}
+
+```
