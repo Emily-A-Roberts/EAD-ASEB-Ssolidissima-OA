@@ -1016,6 +1016,32 @@ tides$Date <- as.POSIXct(strptime(Date1,format = "%Y/%m/%d %H:%M"),tz="Etc/GMT+5
 
 tides$Date[tides$Site=="Eel"] <- tides$Date[tides$Site=="Eel"]+ minutes(60) #Eel Pond tide is delayed by about half an hour consistantely compared to the local tide stations. 
 
+tides$state <- rep(NA, length.out = nrow(tides))
+# for(i in 2:nrow(tides)){
+#   if(tides$Tideheight[i]>tides$Tideheight[i-1]){ tides$state[i] <- "Ebb"} else {tides$state <- "Flood"}
+# }
+
+# tides$state <- ifelse(tides$Tideheight > dplyr::lag(tides$Tideheight, default = first(tides$Tideheight)), "Ebb", "Flood")
+
+library(dplyr)
+#https://www.statology.org/r-lag/
+
+
+# Now 'tide_group' column will contain a unique identifier for each pair of ebb and flood tide
+
+tides$previous_Tideheight <- lag(tides$Tideheight, n = 3)
+tides <- tides %>%
+  mutate(state = case_when(Tideheight > previous_Tideheight 
+                           | Tideheight > lag(previous_Tideheight, 
+                                              n = 3) ~ "Flood",
+                           Tideheight < previous_Tideheight 
+                           | Tideheight < lag(previous_Tideheight, 
+                                              n = 3) ~ "Ebb",
+                           TRUE ~ "Slack"),
+        tide_group = cumsum(state != lag(state, default = first(state))))
+tides$state[1:3] <- "Flood"
+
+
 data_combined$Date<-as.POSIXct(data_combined$Date, tz="Etc/GMT+5")
 data_combined$Date<-round_date(data_combined$Date, unit="minutes")
 
@@ -1064,9 +1090,9 @@ plot(pH~Temp,  pch =".",type ="b", data = Eel, main="Eel")
 Exclude pH from times water below low tide mark.
 
 ```{r}
-Ptown <- Ptown[Ptown$Tideheight>1,] #This was at 0.4
-Den <- Den[Den$Tideheight>2,] #This was at .5
-Eel <- Eel[Eel$Tideheight>1,] #This was at 0. 
+Ptown <- Ptown[Ptown$Tideheight>2,] #This was at 0.4
+Den <- Den[Den$Tideheight>3,] #This was at .5
+Eel <- Eel[Eel$Tideheight>2,] #This was at 0. 
 ```
 
 ```{r}
@@ -1393,6 +1419,7 @@ colors <- c(
 
 # Now I'm aggregating by day... and this is a bit easier to digest when comparing among sites
 
+
 gg1 <- ggplot(all.data.dy, aes(x=Date, y=pH, colour = Site))+
   geom_point(cex = 1) +
   geom_line(cex = 1)+
@@ -1409,17 +1436,20 @@ gg1
 
 ylab = expression("Temperature " ( degree*C))
 
+all.data.dy <- all.data.dy[all.data.dy$Site != "Den",]
+all.data.dy$Site <- as.factor(all.data.dy$Site)
+all.data.dy$Site <- factor(all.data.dy$Site, levels=c ('Ptown', 'Eel', 'Den'))
 
 gg2 <- ggplot(all.data.dy, aes(x=Date, y=Temp, colour = Site))+
   geom_point(cex = 1) +
   geom_line(cex = 1)+
   labs(y=ylab)+
   #ylim(14,30)+
-  xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2023-06-10 00:00:00 EDT")))+
+  xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
     geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 1)+
   geom_point(data = joined_Ptown, aes(x=as.POSIXct(Date),y=Temp_P), color = "orange", cex = .5)+
   geom_point(data = joined_Eel, aes(x=as.POSIXct(Date),y=Temp_E), color = "green", cex = .5)+
-  scale_color_manual(values=colors) +
+  #scale_color_manual(values=colors) +
   guides(colour = guide_legend(override.aes = list(size=5)))+
   geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = Water.Sediment..Temp, colour = Site),cex = 2, pch = 22)+
   ggtitle('A. Temp')
@@ -1474,28 +1504,27 @@ Eel Pond Fall
 
 ```{r}
 data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Conductivity/"
-Eel_cond <- read.csv(paste(data_dir,"20674248_Eel.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
- names(Eel_cond) <- c("n","Date","Cond_High","Cond_Low","Temp","Other")
-str(Eel_cond)
-Eel_cond$Date <- as.POSIXct(Eel_cond$Date, format = "%m/%d/%Y %H:%M")
+Eel_cond <- read.csv(paste(data_dir,"20674248_Eel_Sal.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+ names(Eel_cond) <- c("n","Date","Cond_High","Temp","Sp.Cond","Sal")
+tail(Eel_cond,500)
+Eel_cond$Date <- as.POSIXct(strptime(Eel_cond$Date, 
+                                     format = "%m/%d/%y %I:%M:%S %p", tz = "EST"))
 # 
 # 
  h <- head(Eel_cond,1000)
  plot(data = h,Temp~Date)   
  Eel_cond <- Eel_cond[Eel_cond$Date > "2022-09-29",]
  
-  t <- tail(Eel_cond,1000)
+ t <- tail(Eel_cond,1000)
  plot(data = t,Temp~Date)   
  Eel_cond <- Eel_cond[Eel_cond$Date < "2022-12-05 12:00:00",]
-#
-str(Eel_cond)
 
 gg3 <- gg2+
   geom_point(data = Eel_cond, aes(x=Date,y=Temp), color = "purple", cex = 1)
 gg3
 
 
-plot(Ptown_cond$Date, Ptown_cond$Cond_High, type = "l")
+plot(Eel_cond$Date, Eel_cond$Cond_High, type = "l")
 ```
 
 ```{r}
@@ -1619,4 +1648,162 @@ gg3
 
 
 
+```
+
+## Flood and ebb tide analysis
+
+Issues: The tide groups aren't right. They jump around. Also not all the sediment temps get assigned a tide group because I need to assign everything to the same timeseries (0,15,30,45) etc.
+
+```{r}
+#| column: screen
+#| out-width: 100%
+#| fig-format: svg
+library(zoo)
+library(lubridate)
+
+Ptown_sediment <- Ptown_sediment[,c("Date","Temp")]
+
+# to.minutes15(Ptown)[,4] # interpolate for each 15 min interval
+# format(round_date(as.POSIXct(paste("1900-01-01 ", x)), unit="15 mins"), "%M")
+str(Ptown)
+Ptown$Date <- round_date(Ptown$Date, unit="15 mins")
+tail(Eel$Date)
+Ptown.sed <- merge(Ptown, Ptown_sediment, by = "Date", 
+                   #all = TRUE , 
+                   suffixes = c("",".sediment"))
+Ptown.sed$season <- cut(lubridate::yday(Ptown.sed$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+Ptown.sed <- Ptown.sed[!is.na(Ptown.sed$season),]
+Ptown.sed <- Ptown.sed[Ptown.sed$season!="Winter",]
+
+head(Ptown_sediment$Date) #The sediment logger is on the 15 minute interval. 
+
+
+Eel_sediment <- Eel_sediment[,c("Date","Temp")]
+Eel$Date <- round_date(Eel$Date, unit="15 mins")
+Eel.sed <- merge(Eel, Eel_sediment, by = "Date", 
+                 #all.x = TRUE , 
+                 suffixes = c("",".sediment"))
+Eel.sed$season <- cut(lubridate::yday(Eel.sed$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+Eel.sed$diel <- cut(lubridate::hour(Eel.sed$Date - lubridate::hour(6)), 
+     breaks = c(0, 12, Inf), 
+     labels = c("Day", "Night"))
+
+
+```
+
+```{r}
+library(lemon)
+
+lim.P <- as.POSIXct(c(min(Eel.sed$Date),max(Ptown.sed$Date)))
+lim.E <- as.POSIXct(c(min(Eel.sed$Date),max(Ptown.sed$Date)))
+carb_dat <- carb_dat[carb_dat$Date>min(Eel.sed$Date) & carb_dat$Date<max(Ptown.sed$Date),]
+
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+carb_dat$season <- factor(carb_dat$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+Ptown.sed$season <- factor(Ptown.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+Eel.sed$season <- factor(Eel.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+
+carb_dat.P <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Ptown",]
+carb_dat.E <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Eel",]
+
+
+ggplot(Ptown.sed, aes(y = pH, x = Date))+
+  geom_line(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~season, scales="free", nrow = 4)+
+  geom_point(data = carb_dat.P, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+
+ggplot(Eel.sed, aes(y = pH, x = Date))+
+  geom_line(aes(group = tide_group, color = state))+
+  ggtitle("Eel Pond")+
+  facet_wrap(vars(season), scales = "free", nrow = 4)+
+  geom_point(data = carb_dat.E, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+
+ggplot(Ptown.sed, aes(y = Temp, x = Date))+
+  geom_line(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~season, scales="free", nrow = 4)+
+  geom_point(data = carb_dat.P, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+
+ggplot(Eel.sed, aes(y = Temp, x = Date))+
+  geom_line(aes(group = tide_group, color = state))+
+  ggtitle("Eel Pond")+
+  facet_wrap(vars(season), scales = "free", nrow = 4)+
+  geom_point(data = carb_dat.E, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+
+
+```
+
+```{r}
+ggplot(Ptown.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  facet_wrap(~season)+  ggtitle("Provincetown")
+
+ggplot(Ptown.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  facet_wrap(~season)+  ggtitle("Provincetown")
+
+ggplot(Ptown.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  facet_wrap(~month(Date))+  ggtitle("Provincetown")
+
+Eel.sed$temp.diff <- Eel.sed$Temp-Eel.sed$Temp.sediment
+ggplot(Eel.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  facet_wrap(~season)+  ggtitle("Eel Pond")
+
+ggplot(Eel.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  facet_wrap(~season) +  ggtitle("Eel Pond")
+
+```
+
+```{r}
+# result.P <- Ptown.sed %>%
+#   group_by(tide_group) %>%
+#   reframe(#initial_flood = first(Tideheight[state == "Flood"]),
+#             #final_ebb = last(Tideheight[state == "Ebb"]),
+#             final_ebb_pH = pH[which(Tideheight == 
+#                                     last(Tideheight[state == "Ebb"]))],
+#             initial_flood_pH = pH[which(Tideheight == 
+#                                     first(Tideheight[state == "Flood"]))],
+#             sediment_temp = mean(Temp.sediment, na.rm = TRUE),
+#             #difference = last(Tideheight[state == "Ebb"]) - first(Tideheight[state == "Flood"])
+#             )
+# 
+# result.E <- Eel.sed %>%
+#   group_by(tide_group) %>%
+#   reframe(#initial_flood = first(Tideheight[state == "Flood"]),
+#             #final_ebb = last(Tideheight[state == "Ebb"]),
+#             final_ebb_pH = pH[which(Tideheight ==
+#                                     last(Tideheight[state == "Ebb"]))],
+#             initial_flood_pH = pH[which(Tideheight ==
+#                                     first(Tideheight[state == "Flood"]))],
+#             sediment_temp = mean(Temp.sediment, na.rm = TRUE),
+#             difference = last(Tideheight[state == "Ebb"]) - first(Tideheight[state == "Flood"])
+#              )
+# # 
+# 
+# ggplot(result, aes(y =  final_ebb_pH, x = initial_flood_pH))+
+#   geom_point()+
+#   ylim(7.5,8.5)+
+#   xlim(7.5,8.5)
+# 
+# 
+# result$change <- result$initial_flood_pH-result$final_ebb_pH
+# ggplot(result, aes(y =  change, x = sediment_temp))+
+#   geom_point()
+# #+
+#  # ylim(7.5,8.5)+
+#   #xlim(7.5,8.5)
 ```

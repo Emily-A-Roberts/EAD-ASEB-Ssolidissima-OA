@@ -31,6 +31,7 @@ bd <- bd[bd$TPM>=.9,]
 
 mean(bd$Length)
 
+#To scale by length rather than DW, first multiply by the DW scaling factor. Then divide by the new length scaling factor. 
 bd$CR_len.scaled <- bd$CR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$AR_len.scaled <- bd$AR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
@@ -217,6 +218,8 @@ RR_scaled_emmeans <- cld_out
 ```{r}
 # get (adjusted) weight means per group
 model_means <- emmeans(lm(AR_len.scaled~Month*Site, data = bd), ~ Month * Site, data = bd)
+summary(lm(AR_len.scaled~Month*Site, data = bd))
+
  
 # show differences
 pairs(model_means, adjust = "Tukey", alpha = 0.05)

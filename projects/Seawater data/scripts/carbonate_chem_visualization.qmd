@@ -118,3 +118,73 @@ theme_classic()+
 # 
 ggarrange(gg1, gg2, common.legend = TRUE, legend="bottom")
 ```
+
+```{r}
+# 
+ gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=InSitu.pH, colour = Site))+
+   geom_line(aes(), cex = 1, linetype=3,)+
+   ylim(7.2,8.3)+
+   xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_line(
+        data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Site),
+             linetype=1, cex = 1.5, pch=19)+ #No shell is solid line
+   #geom_point(
+    # data = carb_dat[carb_dat$Stratum=="Bottom water"&
+    #                   carb_dat$Shell.treatment=="Shell",],
+    #          aes(x=Date, y = InSitu.pH, colour = Site),
+    #          cex = 2, pch=22)+
+   #geom_point(
+     #data = carb_dat[carb_dat$Stratum=="Bottom water"&
+     #                  carb_dat$Shell.treatment=="No Shell",],
+     #         aes(x=Date, y = InSitu.pH, colour = Site),
+     #         cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle('B. pH')+
+   ylab("pH")+
+   facet_wrap(~ Site)
+ gg1
+ 
+ carb_dat$Arg.saturation
+ line.1.0 <- data.frame(
+   x = as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")),
+   y=c(1,1)
+ )
+ 
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=Arg.saturation, colour = Site))+
+   geom_line(aes(), cex = 1, linetype=3,)+
+   ylim(0,4)+
+   xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_line(
+        data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = Arg.saturation, colour = Site),
+             linetype=1, cex = 1.5, pch=19)+ #shell is solid line
+   #geom_point(
+   #  data = carb_dat[carb_dat$Stratum=="Bottom water"&
+   #                    carb_dat$Shell.treatment=="Shell",],
+    #          aes(x=Date, y = Arg.saturation, colour = Site),
+    #          cex = 2, pch=22)+
+   #geom_point(
+   #  data = carb_dat[carb_dat$Stratum=="Bottom water"&
+    #                   carb_dat$Shell.treatment=="No Shell",],
+    #          aes(x=Date, y = Arg.saturation, colour = Site),
+    #          cex = 2, pch=19)+ #Shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle(expression(paste("B. ",Omega[Ar],sep="")))+
+   ylab(expression(paste("",Omega[Ar],sep="")))+
+  #geom_line(data = line.1.0, aes(x = x, y = y))+
+   facet_wrap(~ Site)
+ gg2
+ 
+ ggarrange(gg1, gg2, common.legend = TRUE, legend="bottom")
+```

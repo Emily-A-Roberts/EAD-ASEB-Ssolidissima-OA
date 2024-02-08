@@ -1,0 +1,877 @@
+---
+title: "YSI sonde data 1.2"
+
+author: "Emily Roberts"
+
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+editor: visual
+
+params:
+   Total_scale_corr: TRUE #Or false
+
+date: 2023-12-23
+date-format: short
+abstract: "Trim individual files to time deployed and retrieved, then compile and visualize the data. Updated Eel Pond YSI data, and estimated gap in fall 2022 based on nearby YSI sonde. And used salinity-temp-alk relationship (monitoring carbonate chem data) to estimate alkalinity from SONDE data at Eel Pond. Eel Pond salinity is estimated in 6 hour intervals currently. "
+---
+
+```{r}
+library(ggplot2)
+library(data.table)
+library(plotly)
+library(tibbletime)
+library(plyr)
+library(dplyr)
+library(zoo)
+library(tidyr)
+library(ggpubr)
+#library(stat)
+library(scales)
+library(vegan)
+library(pastecs)
+#source('~/Documents/Software/R/MultivariateStats/functions/biostats.R')
+library(tibble)
+library(tidyverse)
+library(PerformanceAnalytics)
+library(lubridate)
+
+
+theme_set(theme_minimal())
+theme_update(panel.grid.minor.y = element_blank(), 
+             panel.grid.major.y = element_line(colour = "grey91"),
+             panel.grid.minor.x = element_line(colour = "grey81"), 
+             panel.grid.major.x = element_line(colour = "grey61"),
+             axis.line = element_blank())
+```
+
+## Eel Pond read in data
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/YSI_Eel/776559/" #Updated 1/19/24
+
+df.Eel.men <- data.table::fread(file = paste(dir_data,"WQBMHWQ.csv", sep=""),header = T, sep = ",",fill=TRUE, skip = 2, stringsAsFactors = FALSE)
+# data gaps in fall 2022
+
+# Set which to use
+df.Eel <- as.data.frame(df.Eel.men)
+df.Eel$datetime <- as.POSIXct(strptime(df.Eel$DateTimeStamp, format = "%m/%d/%Y %H:%M"))
+
+df.Eel.subset <- df.Eel[,c("datetime","Temp","Sal","DO_pct","DO_mgl","Depth","pH","Turb","ChlFluor")]
+
+df.Eel <- df.Eel.subset
+```
+
+```{r}
+h <- head(df.Eel,60)
+t <- tail(df.Eel,60)
+
+plot(h$datetime,h$Sal)
+plot(t$datetime,t$Sal)
+plot(h$datetime,h$Depth)
+plot(t$datetime,t$Depth)
+plot(df.Eel$datetime,df.Eel$Depth)
+plot(df.Eel$datetime,df.Eel$Sal, type = "b") # It looks like there are some bad datapoints in the salinity. I wonder if this indicates storms or cleaning the sensor? 
+
+df.Eel <- df.Eel[df.Eel$Sal>25,]
+df.Eel <- df.Eel[df.Eel$Depth>.5,]
+
+plot(df.Eel$datetime,df.Eel$Depth)
+plot(df.Eel$datetime,df.Eel$Sal, type = "b") # It looks like there are some bad datapoints in the salinity. I wonder if this indicates storms or cleaning the sensor? 
+
+
+
+```
+
+```{r}
+df.Eel.hr <- df.Eel %>% 
+  mutate(datetime = 
+           lubridate::ceiling_date(datetime, 
+                                   unit = "6 hours")) %>% 
+  dplyr::group_by(datetime)%>% 
+  dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
+
+plot(df.Eel$datetime,df.Eel$Temp)
+plot(df.Eel.hr$datetime,df.Eel.hr$Temp)
+plot(df.Eel.hr$datetime,df.Eel.hr$pH)
+
+df.Eel.hr.men <- df.Eel.hr
+```
+
+#### Waquoit bay site (for comparison)
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/YSI_Eel/33861 (1)/"
+
+df.Eel.mx <- data.table::fread(file = paste(dir_data,"WQBMPWQ.csv", sep=""),header = T, sep = ",",fill=TRUE, skip = 2, stringsAsFactors = FALSE)
+# data gaps in spring 2023
+
+# Set which to use
+df.Eel <- as.data.frame(df.Eel.mx)
+df.Eel$datetime <- as.POSIXct(strptime(df.Eel$DateTimeStamp, format = "%m/%d/%Y %H:%M"))
+
+df.Eel.subset <- df.Eel[,c("datetime","Temp","Sal","DO_pct","DO_mgl","Depth","pH","Turb","ChlFluor")]
+
+df.Eel <- df.Eel.subset
+
+df.Eel <- df.Eel[df.Eel$Sal>25,]
+df.Eel <- df.Eel[df.Eel$Depth>.5,]
+
+df.Eel <- df.Eel[df.Eel$datetime<as.Date("2023-01-01"),]
+df.Eel <- df.Eel[df.Eel$datetime>as.Date("2022-08-15"),]
+
+
+df.Eel.hr <- df.Eel %>% 
+  mutate(datetime = 
+           lubridate::ceiling_date(datetime, 
+                                   unit = "6 hours")) %>% 
+  dplyr::group_by(datetime)%>% 
+  dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
+
+df.Eel.hr.mx <- df.Eel.hr
+
+plot(df.Eel$datetime,df.Eel$Temp)
+plot(df.Eel.hr$datetime,df.Eel.hr$Temp)
+plot(df.Eel.hr$datetime,df.Eel.hr$pH)
+
+df.Eel.comb <- merge(df.Eel.hr.mx,df.Eel.hr.men,by = "datetime",all=TRUE, suffixes = c(".mx",""))
+
+df.Eel.comb <- df.Eel.comb[df.Eel.comb$datetime>as.Date("2021-07-15"),]
+df.Eel.comb <- df.Eel.comb[df.Eel.comb$datetime<as.Date("2023-06-15"),]
+
+
+#df.Eel.comb <- df.Eel.comb[df.Eel.comb$season=="Summer"|df.Eel.comb$season=="Autumn"|df.Eel.comb$season=="Winter",]
+
+
+
+```
+
+```{r}
+plot(df.Eel.comb$Temp,df.Eel.comb$Temp.mx)
+plot(ylim = c(20,35),xlim = c(20,35), df.Eel.comb$Sal,df.Eel.comb$Sal.mx)
+
+plot(df.Eel.comb$datetime,df.Eel.comb$Temp, ylim = c(0,30))
+points(df.Eel.comb$datetime,df.Eel.comb$Temp.mx, col = "red")
+
+plot(df.Eel.comb$datetime,df.Eel.comb$Sal, ylim = c(20,35))
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.mx, col = "red")
+
+plot(df.Eel.comb$datetime,df.Eel.comb$pH, ylim = c(7,8.5))
+points(df.Eel.comb$datetime,df.Eel.comb$pH.mx, col = "red")
+
+
+
+```
+
+#### Eel HOBO conductivity
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Conductivity/"
+Eel_cond <- read.csv(paste(data_dir,"20674248_Eel_Sal.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+ names(Eel_cond) <- c("n","Date","Cond_High","Temp","Sp.Cond","Sal")
+tail(Eel_cond,500)
+Eel_cond$Date <- as.POSIXct(strptime(Eel_cond$Date, 
+                                     format = "%m/%d/%y %I:%M:%S %p", tz = "EST"))
+# 
+# 
+ h <- head(Eel_cond,1000)
+ plot(data = h,Temp~Date)   
+ Eel_cond <- Eel_cond[Eel_cond$Date > "2022-09-29",]
+ 
+ t <- tail(Eel_cond,1000)
+ plot(data = t,Temp~Date)   
+ Eel_cond <- Eel_cond[Eel_cond$Date < "2022-12-05 12:00:00",]
+#
+ 
+Eel_cond$Date[Eel_cond$Sal < 25]
+ Eel_cond <- Eel_cond[Eel_cond$Date < "2022-10-08"| Eel_cond$Date > "2022-10-09",]
+ Eel_cond <- Eel_cond[Eel_cond$Date < "2022-11-21"| Eel_cond$Date > "2022-11-23",]
+ Eel_cond <- Eel_cond[Eel_cond$Date < "2022-12-02"| Eel_cond$Date > "2022-12-03",]
+
+  # Eel_cond <- Eel_cond[Eel_cond$Date > "2022-11-21"&Eel_cond$Date < "2022-11-22",]
+ # Eel_cond <- Eel_cond[Eel_cond$Date > "2022-11-21"&Eel_cond$Date < "2022-11-22",]
+
+
+str(Eel_cond)
+plot(Eel_cond$Date, Eel_cond$Sal, type = "l")
+
+
+df.Eel.hr <-  Eel_cond %>% 
+  mutate(datetime = 
+           lubridate::ceiling_date(Date, 
+                                   unit = "6 hours")) %>% 
+  dplyr::group_by(datetime)%>% 
+  dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
+
+df.Eel.hr.HOBO <- df.Eel.hr
+
+df.Eel.comb <- merge(df.Eel.comb,df.Eel.hr.HOBO,by = "datetime",all=TRUE, suffixes = c("",".HOBO"))
+
+
+
+
+
+
+```
+
+#### Comparison of the datasets
+
+```{r}
+plot(df.Eel.comb$Temp,df.Eel.comb$Temp.HOBO)
+plot(ylim = c(20,35),xlim = c(20,35), df.Eel.comb$Sal,df.Eel.comb$Sal.HOBO)
+
+plot(df.Eel.comb$datetime,df.Eel.comb$Temp, ylim = c(0,30))
+points(df.Eel.comb$datetime,df.Eel.comb$Temp.mx, col = "red")
+
+
+plot(df.Eel.comb$datetime,df.Eel.comb$Sal, ylim = c(20,35),cex=.5)
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.HOBO, col = "blue", cex = .2)
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.mx, col = "red",cex =.5)
+
+
+plot(df.Eel.comb$datetime,df.Eel.comb$pH, ylim = c(7,8.5))
+points(df.Eel.comb$datetime,df.Eel.comb$pH.mx, col = "red")
+
+
+plot(df.Eel.comb$datetime,df.Eel.comb$Temp, ylim = c(0,30), pch = ".")
+points(df.Eel.comb$datetime,df.Eel.comb$Temp.mx, col = "red", pch = ".")
+points(df.Eel.comb$datetime,df.Eel.comb$Temp.HOBO, col = "blue", pch = ".")
+
+
+plot(df.Eel.comb$datetime,df.Eel.comb$Sal, ylim = c(20,35), pch = ".")
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.mx, col = "red", pch = ".")
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.HOBO, col = "blue", pch = ".")
+
+
+plot(df.Eel.comb$datetime,df.Eel.comb$pH, ylim = c(7,8.5), pch = ".")
+points(df.Eel.comb$datetime,df.Eel.comb$pH.mx, col = "red", pch = ".")
+points(df.Eel.comb$datetime,df.Eel.comb$pH.HOBO, col = "blue", pch = ".")
+```
+
+Looking at this graph of salinity, it seems that the HOBO conductivity meter is either drifting quite a bit, or is catching a level of local deviation from more flushed environments that neither the YSI SONDEs in the area are catching. This makes me wonder how these salinities compare to what we actually were measuring.
+
+#### Predict missing salinity data
+
+```{r}
+df.Eel.comb$Temp.diff <- df.Eel.comb$Temp.HOBO-df.Eel.comb$Temp.mx
+sal.pred.mod <- lm(data = df.Eel.comb, 
+                   Sal ~ Sal.mx + Temp.mx) #with the Temp.diff, predicts only 0.408
+  temp.pred.mod <- lm(df.Eel.comb$Temp ~ df.Eel.comb$Sal.mx + df.Eel.comb$Temp.mx)
+
+  summary(sal.pred.mod)
+  summary(temp.pred.mod)
+  
+df.Eel.comb$Temp_pred <- predict(temp.pred.mod, newdata = df.Eel.comb)
+df.Eel.comb$Sal_pred <- predict(sal.pred.mod, newdata = df.Eel.comb)
+
+df.Eel.comb$Temp[is.na(df.Eel.comb$Temp)] <- df.Eel.comb$Temp_pred[is.na(df.Eel.comb$Temp)] 
+df.Eel.comb$Sal[is.na(df.Eel.comb$Sal)] <- df.Eel.comb$Sal_pred[is.na(df.Eel.comb$Sal)] 
+
+
+df.Eel.comb$season <- cut(lubridate::yday(df.Eel.comb$datetime - lubridate::days(79)), 
+    breaks = c(0, 93, 187, 276, Inf), 
+    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+
+#Note that this predicts 40% of the the salinity
+
+```
+
+#### Read in carbonate chemistry data (monitoring)
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/"
+carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.xlsx - Monitoring_sites_only.csv", sep = ""), stringsAsFactors = FALSE)
+carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%y")
+carb_dat <- carb_dat[!is.na(carb_dat$Date),]
+carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
+carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
+carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
+carb_dat$Site <- as.factor(carb_dat$Site)
+carb_dat.E <- carb_dat[carb_dat$Site == "Eel",]
+
+
+```
+
+```{r}
+plot(df.Eel.comb$datetime,df.Eel.comb$Sal, ylim = c(20,35))
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.mx, col = "red")
+points(df.Eel.comb$datetime,df.Eel.comb$Sal.HOBO, col = "blue")
+points(carb_dat.E$Date,carb_dat.E$Salinity, col = "blue")
+df.Eel.comb$season <- cut(lubridate::yday(df.Eel.comb$datetime - lubridate::days(79)), 
+    #breaks = c(0, 93, 187, 276, Inf), 
+    breaks = c(0, 93, 187, 323, Inf), 
+
+    labels = c("Spring", "Summer", "Autumn", "Spring"))
+
+ggplot(df.Eel.comb, aes(x = datetime, y = Sal)) +
+  geom_point()+
+  geom_point(data = carb_dat.E[!is.na(carb_dat.E$Lab.Alkalinity),], aes(x = Date, y = Salinity), color = "blue", position = position_jitter(width = 0.2, height = 0))+
+    geom_point(data = carb_dat.E[!is.na(carb_dat.E$Field.Alkalinity),], aes(x = Date, y = Salinity), color = "green")+
+  ylim(c(20,35))
+
+
+ggplot(df.Eel.comb, aes(x = datetime, y = Temp, color = season)) +
+  geom_point()
+# Note there are no overlapping field and lab alkalinity measurements here. 
+```
+
+#### Visualize relationships between salinity and alkalinity (and alk and DIC for reference)
+
+```{r}
+carb_dat.E.BW <- carb_dat.E[carb_dat.E$Stratum=="Bottom water",]
+#carb_dat.E.BW <- carb_dat.E[carb_dat.E$Shell.treatment,]
+
+# Salinity as reported by YSI handhelds (we alternated which one and calibrated it 1 time per year)
+plot(carb_dat.E.BW$Salinity,carb_dat.E.BW$Field.Alkalinity, col = "blue")
+plot(carb_dat.E.BW$Salinity,carb_dat.E.BW$Lab.Alkalinity, col = "blue")
+
+df.Eel.comb.new <- merge(df.Eel.comb,carb_dat.E.BW,by.x = "datetime",by.y ="Date",all.y=TRUE, suffixes = c("",".Monitoring"))
+
+# Salinity as reported by YSI EXO2 SONDE at manuhant
+plot(df.Eel.comb.new$Sal,df.Eel.comb.new$Field.Alkalinity.Monitoring, col = "blue")
+plot(df.Eel.comb.new$Sal,df.Eel.comb.new$Lab.Alkalinity.Monitoring, col = "blue")
+
+#df.Eel.comb$Lab.Alkalinity
+#carb_dat.E.BW
+ggplot(df.Eel.comb.new, aes(x = Salinity, y = Alk, color = season)) + 
+  geom_point() + theme_classic()+
+  geom_smooth(method = "lm", se = FALSE)
+
+
+ggplot(df.Eel.comb.new, aes(x = Sal, y = Alk, color = season)) +   geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+
+#df.Eel.comb.new$DIC
+ggplot(df.Eel.comb.new, aes(x = DIC, y = Alk, color = season)) +   geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+
+
+ggplot(df.Eel.comb.new, aes(x = Sal, y = Alk, color = Temp)) +   geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+
+#ggplot(df.Eel.comb.new, aes(x = Sal, y = Field.Alkalinity, color = season)) +   geom_point()
+
+
+#df.Eel.comb.new$
+#+
+  #scale_color_manual(values = c("#E7B800","#00757d")) +
+  #theme_minimal()
+  #ylab(expression(paste("SONDE Oxygen % sat")))+
+  #xlab("Date")+
+  #xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+  #xlim(as.POSIXct(c("5/15/22","11/01/22"), format = "%m/%d/%y"))
+```
+
+#### Predict alkalinity timeseries
+
+Note - there is probably a better way to do this. Particularly, I think the fluctations within a day in temp and salinity may be confounded with temp and salinity fluctuations throughout a year. Filling in short term gaps it makes sense to use linear functions, but estimating alkalinity from salinity and temp over two years, I'm not sure because of the interaction with season and temp. Here is a tutorial on timeseries predictions [Time series forecasting  \|  TensorFlow Core](https://www.tensorflow.org/tutorials/structured_data/time_series) .
+
+```{r}
+#ggplot(df.Eel.comb.new, aes(x = Sal, y = Alk, color = season)) +   geom_point() + 
+#  geom_smooth(method = "lm", se = FALSE)
+
+
+ df.Eel.comb$season <- cut(lubridate::yday(df.Eel.comb$datetime - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     #breaks = c(0, 93, 187, 323, Inf), 
+      
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+ 
+  df.Eel.comb.new$season <- cut(lubridate::yday(df.Eel.comb.new$datetime - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     #breaks = c(0, 93, 187, 323, Inf), 
+      
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+pred_Alk_season <- lm(data =df.Eel.comb.new, Alk ~ season + Sal + Temp) # These factors seem to explain about 60% of the variation
+pred_Alk_no_seasons <- lm(data =df.Eel.comb.new, Alk ~ Sal + Temp) # These factors seem to explain about 60% of the variation
+pred_Alk_int_season <- lm(data =df.Eel.comb.new, Alk ~ Sal + Temp + season+ Temp:season) # These factors seem to explain about 60% of the variation
+pred_Alk_int_week <- lm(data =df.Eel.comb.new, Alk ~ Sal + Temp + week(datetime) + Temp:week(datetime)) # These factors seem to explain about 60% of the variation
+
+library(AICcmodavg)
+AIC(pred_Alk_season,pred_Alk_int_season,pred_Alk_no_seasons, pred_Alk_int_week)
+
+
+summary(pred_Alk_season)
+summary(pred_Alk_no_seasons)
+summary(pred_Alk_int_season) #This explains 70% of the alkalinity data
+summary(pred_Alk_int_week)
+
+
+#df.Eel.comb$datetime
+df.Eel.comb$Alk <- predict(object = pred_Alk_int_season, newdata = df.Eel.comb)
+plot(data = df.Eel.comb, Alk ~ datetime)
+points(data = df.Eel.comb.new, Alk ~ datetime, col = "green", pch = 20, cex = 1.2)
+
+df.Eel.comb$Alk <- predict(object = pred_Alk_no_seasons, newdata = df.Eel.comb)
+plot(data = df.Eel.comb, Alk ~ datetime)
+points(data = df.Eel.comb.new, Alk ~ datetime, col = "green", pch = 20, cex = 1.2)
+```
+
+## Ptown read in data
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/YSI_Ptown/"
+```
+
+6/15/22 - 08/30/22
+
+```{r}
+df.Ptown <- data.table::fread(file = paste(dir_data,"Kor Measurement File Export - 012423 154508.csv", sep=""),header = T, sep = ",", skip = 8, stringsAsFactors = FALSE)
+df.Ptown<- as.data.frame(df.Ptown)
+names(df.Ptown) <- c("Date","Time","Sec","Site","ChlRFU","Cond_uS/cm","Depth","nlF_Cond","DO_pct","DO_%CB",
+                     "DO_mgl","Pressure_psi","Sal","SpCond","TAL PE RFU","TDS_mg/L","Turb",
+                     "TSS_mg/L","Wiper Position_V","pH","pH_mV","Temp","Vert_Pos","Battery_V","Cable Pwr")
+df.Ptown$datetime <- paste(df.Ptown[,"Date"],df.Ptown[,"Time"], sep = " ")
+df.Ptown$datetime <- as.POSIXct(strptime(df.Ptown$datetime, format = "%m/%d/%y %H:%M:%S"))
+
+```
+
+```{r}
+h <- head(df.Ptown,60)
+t <- tail(df.Ptown,60)
+
+plot(h$datetime,h$Sal)
+plot(t$datetime,t$Sal)
+plot(h$datetime,h$Depth)
+plot(t$datetime,t$Depth)
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+df.Ptown <- df.Ptown[df.Ptown$Sal>5,]
+df.Ptown <- df.Ptown[df.Ptown$Depth>.3,]
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+
+dat_1 <- df.Ptown
+```
+
+```{r}
+# 8/31/22 - 09/25/22
+
+df.Ptown <- data.table::fread(file = paste(dir_data,"Kor Measurement File Export - 012423 154425.csv", sep=""),header = T, sep = ",", skip = 8, stringsAsFactors = FALSE)
+df.Ptown<- as.data.frame(df.Ptown)
+names(df.Ptown) <- c("Date","Time","Sec","Site","ChlRFU","Cond_uS/cm","Depth","nlF_Cond","DO_pct","DO_%CB",
+                     "DO_mgl","Pressure_psi","Sal","SpCond","TAL PE RFU","TDS_mg/L","Turb",
+                     "TSS_mg/L","Wiper Position_V","pH","pH_mV","Temp","Vert_Pos","Battery_V","Cable Pwr")
+
+df.Ptown$datetime <- paste(df.Ptown[,"Date"],df.Ptown[,"Time"], sep = " ")
+df.Ptown$datetime <- as.POSIXct(strptime(df.Ptown$datetime, format = "%m/%d/%y %H:%M:%S"))
+
+```
+
+```{r}
+h <- head(df.Ptown,60)
+t <- tail(df.Ptown,60)
+plot(h$datetime,h$Sal)
+plot(t$datetime,t$Sal)
+plot(h$datetime,h$Depth)
+plot(t$datetime,t$Depth)
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+# df.Ptown <- df.Ptown[df.Ptown$Sal>5,] Not needed
+# df.Ptown <- df.Ptown[df.Ptown$Depth>.3,] Not needed
+dat_2 <- df.Ptown
+```
+
+```{r}
+# 10/11/22 - 11/7/22
+df.Ptown <- data.table::fread(file = paste(dir_data,"Kor Measurement File Export - 012423 154319.csv",sep=""),header = T, sep = ",", skip = 8, stringsAsFactors = FALSE)
+df.Ptown<- as.data.frame(df.Ptown)
+names(df.Ptown) <- c("Date","Time","Sec","Site","ChlRFU","Cond_uS/cm","Depth","nlF_Cond","DO_pct","DO_%CB",
+                     "DO_mgl","Pressure_psi","Sal","SpCond","TAL PE RFU","TDS_mg/L","Turb",
+                     "TSS_mg/L","Wiper Position_V","pH","pH_mV","Temp","Vert_Pos","Battery_V","Cable Pwr")
+df.Ptown$datetime <- paste(df.Ptown[,"Date"],df.Ptown[,"Time"], sep = " ")
+df.Ptown$datetime <- as.POSIXct(strptime(df.Ptown$datetime, format = "%m/%d/%y %H:%M:%S"))
+
+```
+
+```{r}
+h <- head(df.Ptown,60)
+t <- tail(df.Ptown,60)
+plot(h$datetime,h$Sal)
+plot(t$datetime,t$Sal)
+plot(h$datetime,h$Depth)
+plot(t$datetime,t$Depth)
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+# df.Ptown <- df.Ptown[df.Ptown$Sal>5,] Not needed
+df.Ptown <- df.Ptown[df.Ptown$Depth>.3,] 
+dat_3 <- df.Ptown
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+```
+
+```{r}
+# 11/7/22 - 1/21/22
+df.Ptown <- data.table::fread(file = paste(dir_data,"Kor Measurement File Export - 012423 154229.csv",sep=""),header = T, sep = ",", skip = 8, stringsAsFactors = FALSE)
+df.Ptown<- as.data.frame(df.Ptown)
+names(df.Ptown) <- c("Date","Time","Sec","Site","ChlRFU","Cond_uS/cm","Depth","nlF_Cond","DO_pct","DO_%CB",
+                     "DO_mgl","Pressure_psi","Sal","SpCond","TAL PE RFU","TDS_mg/L","Turb",
+                     "TSS_mg/L","Wiper Position_V","pH","pH_mV","Temp","Vert_Pos","Battery_V","Cable Pwr")
+df.Ptown$datetime <- paste(df.Ptown[,"Date"],df.Ptown[,"Time"], sep = " ")
+df.Ptown$datetime <- as.POSIXct(strptime(df.Ptown$datetime, format = "%m/%d/%y %H:%M:%S"))
+
+```
+
+```{r}
+h <- head(df.Ptown,60)
+t <- tail(df.Ptown,60)
+plot(h$datetime,h$Sal)
+plot(t$datetime,t$Sal)
+plot(h$datetime,h$Depth)
+plot(t$datetime,t$Depth)
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+# df.Ptown <- df.Ptown[df.Ptown$Sal>5,] Not needed
+df.Ptown <- df.Ptown[df.Ptown$Depth>.3,] 
+dat_4 <- df.Ptown
+```
+
+I need the data from 1/21/23 to \~6/15/23
+
+```{r}
+# 11/7/22 - 1/21/22
+df.Ptown <- data.table::fread(file = paste(dir_data,"Kor Measurement File Export - 122323 131516.csv",sep=""),header = T, sep = ",", skip = 8, stringsAsFactors = FALSE)
+df.Ptown<- as.data.frame(df.Ptown)
+names(df.Ptown) <- c("Date","Time","Sec","Site","ChlRFU","Cond_uS/cm","Depth","nlF_Cond","DO_pct","DO_%CB",
+                     "DO_mgl","Pressure_psi","Sal","SpCond","TAL PE RFU","TDS_mg/L","Turb",
+                     "TSS_mg/L","Wiper Position_V","pH","pH_mV","Temp","Vert_Pos","Battery_V","Cable Pwr")
+df.Ptown$datetime <- paste(df.Ptown[,"Date"],df.Ptown[,"Time"], sep = " ")
+df.Ptown$datetime <- as.POSIXct(strptime(df.Ptown$datetime, format = "%m/%d/%Y %H:%M:%S"))
+
+df.Ptown <- df.Ptown %>% 
+  mutate_if(is.character,as.numeric)
+str(df.Ptown)
+
+```
+
+```{r}
+h <- head(df.Ptown,60)
+t <- tail(df.Ptown,60)
+plot(h$datetime,h$Sal)
+plot(t$datetime,t$Sal)
+plot(h$datetime,h$Depth)
+plot(t$datetime,t$Depth)
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+# df.Ptown <- df.Ptown[df.Ptown$Sal>5,] Not needed
+df.Ptown <- df.Ptown[df.Ptown$Depth>.5,] 
+#Note there were a few calibrations in this dataset
+# 4/10/23 between 11AM and 1PM
+# 5/10/23 between 11AM and 1PM
+df.Ptown.plot <- df.Ptown[df.Ptown$datetime<"2023-04-11 00:00:00" & df.Ptown$datetime>"2023-04-10 00:00:00",]
+plot(df.Ptown.plot$datetime,df.Ptown.plot$Depth) #No bad data recorded during time when sensor was calibrated
+
+df.Ptown.plot <- df.Ptown[df.Ptown$datetime<"2023-05-10 16:00:00" & df.Ptown$datetime>"2023-05-10 08:00:00",]
+plot(df.Ptown.plot$datetime,df.Ptown.plot$Depth) 
+
+df.Ptown <- 
+  df.Ptown[df.Ptown$datetime!="2023-05-10 11:00:00",]#Just one data point at 10AM is bad bc sensor is (partially) out of the water. 
+
+plot(df.Ptown$datetime,df.Ptown$Depth)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+
+df.Ptown
+dat_5 <- df.Ptown
+```
+
+```{r}
+# Combine the different series of datasets
+df.Ptown <- rbind(dat_1, dat_2, dat_3, dat_4, dat_5)
+str(df.Ptown)
+df.Ptown <- df.Ptown[,c("datetime","ChlRFU","Depth","DO_pct","DO_mgl","Sal","Turb","pH","Temp","Vert_Pos","Battery_V")]
+
+
+
+```
+
+```{r}
+plot(df.Ptown$datetime,df.Ptown$Temp)
+plot(df.Ptown$datetime,df.Ptown$Sal)
+```
+
+#### Read in carbonate chem data
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/"
+carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.xlsx - Monitoring_sites_only.csv", sep = ""), stringsAsFactors = FALSE)
+carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%y")
+carb_dat <- carb_dat[!is.na(carb_dat$Date),]
+carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
+carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
+carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
+carb_dat$Site <- as.factor(carb_dat$Site)
+carb_dat.P <- carb_dat[carb_dat$Site == "Ptown",]
+
+
+
+```
+
+```{r}
+carb_dat.P.BW <- carb_dat.P[carb_dat.P$Stratum=="Bottom water",]
+#carb_dat.P.BW <- carb_dat.P[carb_dat.P$Shell.treatment,]
+
+# Salinity as reported by YSI handhelds (we alternated which one and calibrated it 1 time per year)
+plot(carb_dat.P.BW$Salinity,carb_dat.P.BW$Field.Alkalinity, col = "blue")
+plot(carb_dat.P.BW$Salinity,carb_dat.P.BW$Lab.Alkalinity, col = "blue")
+
+df.P.comb.new <- merge(df.Ptown,carb_dat.P.BW,by.x = "datetime",by.y ="Date",all.y=TRUE, suffixes = c("",".Monitoring"))
+
+df.P.comb.new$season <- cut(lubridate::yday(df.P.comb.new$datetime - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     #breaks = c(0, 93, 187, 323, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+df.Ptown$season <- cut(lubridate::yday(df.Ptown$datetime - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     #breaks = c(0, 93, 187, 323, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+# Salinity as reported by YSI EXO2 SONDE at manuhant
+plot(df.P.comb.new$Sal,df.P.comb.new$Alk, col = "blue")
+
+#df.P.comb$Lab.Alkalinity
+#carb_dat.E.BW
+ggplot(df.P.comb.new, aes(x = Salinity, y = Alk, color = season)) + 
+  geom_point() + theme_classic()#+
+  #geom_smooth(method = "lm", se = FALSE)
+
+
+ggplot(df.P.comb.new, aes(x = Sal, y = Alk, color = season)) +   geom_point() #+ 
+  #geom_smooth(method = "lm", se = FALSE)
+
+#df.P.comb.new$DIC
+ggplot(df.P.comb.new, aes(x = DIC, y = Alk, color = season)) +   geom_point() #+ 
+ # geom_smooth(method = "lm", se = FALSE)
+
+
+ggplot(df.P.comb.new, aes(x = Sal, y = Alk, color = Temp)) +   geom_point() + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+#### Predict alkalinity
+
+```{r}
+pred_Alk_season <- lm(data =df.P.comb.new, Alk ~ season + Sal + Temp) # These factors seem to explain about 60% of the variation
+pred_Alk_no_seasons <- lm(data =df.P.comb.new, Alk ~ Sal + Temp) # These factors seem to explain about 60% of the variation
+pred_Alk_int_season <- lm(data =df.P.comb.new, Alk ~ Sal + Temp + season+ Temp:season) # These factors seem to explain about 60% of the variation
+pred_Alk_int_week <- lm(data =df.P.comb.new, Alk ~ Sal + Temp + week(datetime) + Temp:week(datetime)) # These factors seem to explain about 60% of the variation
+
+library(AICcmodavg)
+AIC(pred_Alk_season,pred_Alk_int_season,pred_Alk_no_seasons, pred_Alk_int_week)
+
+
+summary(pred_Alk_season)
+summary(pred_Alk_no_seasons)
+summary(pred_Alk_int_season) 
+summary(pred_Alk_int_week)
+
+
+
+df.Ptown$Alk_pred <- predict(object = pred_Alk_season, newdata = df.Ptown)
+plot(data = df.Ptown, Alk_pred ~ datetime)
+points(data = df.P.comb.new, Alk ~ datetime, col = "green", pch = 20, cex = 1.2)
+```
+
+## Merge the two datasets
+
+```{r}
+
+df.Eel.day <-  df.Eel.comb.new %>% 
+  mutate(datetime = 
+           lubridate::ceiling_date(Date, 
+                                   unit = "day")) %>% 
+  dplyr::group_by(datetime)%>% 
+  dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
+
+df.Eel.day <-  df.Eel.comb.new %>% 
+  mutate(datetime = 
+           lubridate::ceiling_date(Date, 
+                                   unit = "day")) %>% 
+  dplyr::group_by(datetime)%>% 
+  dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
+
+df.all <- merge(x = as.data.frame(df.Ptown),y = as.data.frame(df.Eel.hr), by.x = "datetime", by.y = "datetime", suffixes = c("_P","_E"), all = TRUE)
+```
+
+```{r}
+# Temp plots
+data_long <- gather(df.all, condition, measurement, c("Temp_P","Temp_E"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+  ylab(expression(paste("Hourly SONDE Temperature (",degree,"C)")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+```
+
+```{r}
+# Sal plots
+data_long <- gather(df.all, condition, measurement, c("Sal_P","Sal_E"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+  ylab(expression(paste("SONDE Salinity (psu)")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+
+```
+
+```{r}
+# Oxygen plots
+
+# Removing DO at 150 % sat. This does not make logical sense and these values are present in July to October in Provincetown in 2022. 
+df.all$DO_pct_P[df.all$datetime>"2022-06-01"&df.all$datetime<"2022-08-30"]<- NA
+
+
+data_long <- gather(df.all, condition, measurement, c("DO_pct_P","DO_pct_E"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+  ylab(expression(paste("SONDE Oxygen % sat")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+  #xlim(as.POSIXct(c("5/15/22","11/01/22"), format = "%m/%d/%y"))
+```
+
+```{r}
+# pH plots
+
+# Removing pH below 7.5. This does not make logical sense and these values are present in February and March. 
+#df.all$pH_E[df.all$pH_E<7.5]<- NA
+df.all$pH_E[df.all$datetime>"2023-02-21"&df.all$datetime<"2023-03-23"]<- NA
+
+data_long <- gather(df.all, condition, measurement, c("pH_P","pH_E"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+  ylab(expression(paste("SONDE pH")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+
+```
+
+```{r}
+# Chl plots
+data_long <- gather(df.all, condition, measurement, c("ChlRFU","ChlFluor"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+  ylab(expression(paste("SONDE Fluorescence RFU ")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+```
+
+```{r}
+# Turbidity plots
+data_long <- gather(df.all, condition, measurement, c("Turb_P","Turb_E"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+  ylab(expression(paste("SONDE Turbidity")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+```
+
+```{r}
+df.all$TempC_Ptown <- df.all$Temp_P
+df.all$TempC_Eel <- df.all$Temp_E
+
+data_long <- gather(df.all, condition, measurement, c("TempC_Ptown","TempC_Eel"), factor_key = TRUE)
+
+head(data_long)
+max.m <- max(data_long$measurement, na.rm = TRUE)
+min.m <- min(data_long$measurement, na.rm = TRUE)
+
+max.m_upper_top <- max.m + 0.07*(max.m-min.m)
+max.m_upper <- max.m + 0.04*(max.m-min.m)
+max.m_lower <- max.m + 0.01*(max.m-min.m)
+data_long$presence[data_long$measurement>0 & data_long$condition=="TempC_Eel"] <- max.m_upper
+data_long$presence[data_long$measurement>0 & data_long$condition=="TempC_Ptown"] <- max.m_lower
+
+df.2 <- data.frame(
+  condition = data_long$condition,
+  date = data_long$datetime,
+  measurement = data_long$presence
+)
+df.3 <- data.frame(
+  date = as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"),
+  measurement = max.m_upper_top*c(1,1)
+)
+```
+
+```{r}
+write_dir<- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/"
+write.csv(df.all,file = paste(write_dir,"YSI_Eel_Ptown.csv",sep=""))
+```
+
+```{r}
+temp_graph <- ggplot(data_long, aes(x = datetime, y = measurement))+ 
+  geom_point(aes(color = condition), alpha = 0.05, size = 0.5, show.legend = FALSE) +
+  #geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#00757d","#E7B800")) +
+  ylab(expression(paste("Temperature (",degree,"C)")))+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+temp_graph
+```
+
+```{r}
+# Temp monthly means ====
+
+str(df.all)
+
+
+all_daily <- df.all %>% 
+  mutate(year = year(datetime), month = month(datetime), day = day(datetime)) %>%
+  group_by(date = as.Date(paste(year, month,day,01, sep="-"))) %>%
+  summarise_all(list(~mean(., na.rm = TRUE)))
+
+data_long <- gather(df.all, condition, measurement, c("Temp_P","Temp_E"), factor_key = TRUE)
+#data_long <- gather(all_daily, condition, measurement, c("Temp_P","Temp_E"), factor_key = TRUE)
+ggplot(data_long, aes(x = datetime, y = measurement)) + 
+  #geom_point(aes(color = condition), alpha = 0.2) +
+  geom_line(aes(color = condition), size = .5) +
+  scale_color_manual(values = c("#E7B800","#00757d")) +
+  theme_minimal()+
+ ylab(expression(paste("Hourly SONDE Temperature (",degree,"C)")))+
+  xlab("Date")+
+  xlim(as.POSIXct(c("5/15/22","6/15/23"), format = "%m/%d/%y"))
+
+all_monthly <- df.all %>% 
+  mutate(year = year(datetime), month = month(datetime)) %>%
+  group_by(date = as.Date(paste(year, month,01, sep="-"))) %>%
+  summarise_all(list(~mean(., na.rm = TRUE),~max(., na.rm = TRUE),~min(., na.rm = TRUE)))
+
+data_long <- gather(all_monthly, condition, measurement, 
+                    c("TempC_Ptown_mean","TempC_Ptown_max","TempC_Ptown_min",
+                      "TempC_Eel_mean","TempC_Eel_max","TempC_Eel_min"), factor_key = TRUE)
+
+ggplot(data_long, aes(x = date, y = measurement)) + 
+  geom_point(aes(color = condition), size = 0.5, alpha = 0.2) +
+  geom_line(aes(color = condition, linetype = condition),  size = .5) +
+  scale_color_manual(values = c("#00757d","#00757d","#00757d", "#E7B800", "#E7B800", "#E7B800")) +
+  scale_linetype_manual(values = c("solid","dotted","dotted","solid","dotted","dotted"))+
+  theme_minimal()
+
+```
+
+```{r}
+
+
+```

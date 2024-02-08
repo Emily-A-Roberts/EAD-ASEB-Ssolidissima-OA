@@ -1,0 +1,575 @@
+---
+title: "DEB.Model.1.1.1"
+editor: visual
+date: "2023-12-02"
+author: "Emily Roberts"
+subtitle: "Growth predictions from environmental conditions"
+abstract: |
+ I'm adding a MLE to estimate Xk. 
+
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+---
+
+### DEB code developed Summer 2018
+
+Code DEB 3 state variables Emilien Pousse
+
+DEB with pCO2 effect
+
+### Load packages, access files and DEB parameters
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/"
+dir_data_biodep <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data/"
+library(R.matlab)
+library("ggplot2")
+filename <- paste(dir_data,sep="","results_Ensis_directus.mat")
+ParaMat=readMat(filename )
+Param <- list()
+```
+
+##### Initialize *Spisula solidissima* parameters
+
+Parameters from email correspondence 12/4/23
+
+```{r}
+
+Param$RhoV=15600; #(it is a general number for bivalves)
+Param$GammaL1=0.8
+Param$GammaL2=0.8
+Param$v= 0.011 #cm/d Energy conductance
+Param$Kappa=0.9607
+Param$KappaX <- 0.8 #K Digestion efficiency of food
+Param$Pm=10.64 #13.48
+Param$Eg=2360 	 #2361
+Param$Shape=0.37 	#0.445
+Param$s_M= 17.8 	 	 	 	#7.49598
+Param$Pxm= 9.08/.8  	#30.6986/0.8
+Param$Em=Param$Pxm*Param$KappaX/Param$v
+
+#Arrhenius 5 parameter TPC
+Param$Ta <- 9018 #K
+Param$T1 <- 293.15 #K
+Param$Tl <- 277.3 #K
+Param$Th <- 296.5 #K
+Param$Tal <- 15601 #K
+Param$Tah <- 33775 #K
+
+Param$Lp <- 3 #cm From Pousse et al. 2023
+Param$dv <- 0.09 
+Param$RhoE <- 19600 #J/g
+```
+
+Parameters from conversation on GitHub on Jan 10, 2022
+
+```{r}
+Param$pHl <- 1011 #uatm Lower pCO2 boundary for ingestion
+Param$pHh <- 6778 #uatm Higher pCO2 boundary for ingestion
+
+Param$MpHl <- 700 #uatm Lower pCO2 boundary for maintenance costs
+Param$MpHh <- 1300 #uatm Higher pCO2 boundary for maintenance costs
+```
+
+##### Initialize *Spisula solidissima* pH parameters
+
+```{r}
+Param$del_pH=0.01
+```
+
+##### Chose the date when you want the model to start
+
+This will set different temperature and pCO2 forcing variables
+
+```{r}
+Oyster='now'# now; 2045; 2070; 2095
+Zone="CapeCod" 
+```
+
+### Read in Cape Cod data
+
+Load CapeCod estimates
+
+```{r}
+CapeCod_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/Transplant_test_dummy_data/"
+biometrics_data <- read.csv(paste(CapeCod_dir,"Lengths.csv",sep = "")) #Biometrics
+environ_data <- read.csv(paste(CapeCod_dir,"Environ.csv",sep = "")) #Environment
+```
+
+### Cape Cod data temporal vector
+
+Make the temporal vector. Here I'm using tester data that is 20 days long, so made my start and stop dates match.
+
+```{r}
+ScRCP = "Validation"
+Zone = "CapeCod"
+if(ScRCP=='Validation'){
+  Oyster="nul"
+  date_start<-"01/01/2019"# Select a start date format = dd/mm/yyyy
+  date_end<-"01/20/2019"
+  MABpCO2=environ_data$pCO2
+  pH=MABpCO2
+  }
+
+ date_start <- as.numeric(strptime(date_start,tz="UTC",format="%m/%d/%Y"))
+ date_end <- as.numeric(strptime(date_end,tz="UTC",format="%m/%d/%Y"))
+
+ dt   <- 86400 # in secondes (3600s = 1h / 86400s = 1day / 28800 = 8h )
+ pdt  <- dt / 86400 # time step in day (= unité de paramètres du DEB)
+ Xnum <- seq(from = date_start,date_end,dt)#vector with each time step (sec)
+ Xtps <- as.POSIXct(Xnum,origin='1970-1-1',tz="UTC")#vector with each time step (normal date)
+ ndt  <- length(Xnum)# Number of days
+# ndt=9125
+
+
+```
+
+```{r}
+Oyster <- "now"
+if(Oyster=='now'){
+Temp=environ_data$Temp+273
+pH=environ_data$pCO2
+Food=environ_data$POM
+Param$Xk=1.8 #Initial starting value for mle
+}
+```
+
+### Verification of the forcing variables
+
+```{r}
+# Temp=rep(25,25)
+# Food = rep(1, 25)
+#Check if all the forcing variables have the same length or have missing values
+if (length(Temp) <= 1 || length(Temp) != length(Food)) {
+  stop("Arguments Temp / Food / T_im have different lengths: ",length(Temp)," ; ",length(Food))
+}
+if (TRUE %in% is.na(Temp) || TRUE %in% is.na(Food)) {
+  stop(" Arguments Temp, Food and T_im must not have missing values.")
+}# Just to confirm that forcing variables are correct
+
+```
+
+### Get initial values
+
+Note - our surfclams start around a size of 1cm length as well, so this can be used without much modification.
+
+```{r}
+file_init <- paste(dir_data,sep="","USBiominit.csv")
+
+(phys=read.csv2(file_init,sep=",",dec="."))#Load file with initial observation
+phys$DFM=rep(0.005,2)
+phys$LEN=rep(1,2)
+Init=c()
+id=seq(1:2)
+Eri=c()
+Ei=c()
+Vi=c()
+DFMi=c()
+
+```
+
+```{r}
+for (p in 1:2){
+  e=0.2#0.57 #Density of reserve: 1=full, 0=empty, rule: 0.2 winter, 0.6 summer 0.4 fall/spring
+  Vi[p]   = (phys$LEN[p] * Param$Shape)^3
+  Ei[p]=Param$RhoE*(8.18e-6-(Vi[p]*0.09))
+  
+  if(Vi[p]>(Param$Lp*Param$Shape)^3){Eri[p]= ((phys$DFM[p] - (Vi[p] *Param$dv)) * Param$RhoE - Ei[p])
+  }else{Eri[p]=0
+  Ei[p]= max(c(0.000001,(phys$DFM[p]-Vi[p]*Param$dv)*Param$RhoE))} 
+  #Initial Ei is from DFM = E+V. E = Ei + Eir. If not reproductive then Eir = 0. I think max 0.000001 is set up to avoid the problem that Ei could be set to 0 inadvertantly. 
+  
+  if(Eri[p]<=0){Eri[p]=0}
+
+  DFMi[p] = ((Ei[p] + Eri[p])/Param$RhoE + Param$dv*Vi[p])
+}
+Init=as.data.frame(cbind(id,Vi,Ei,Eri,DFMi))#,Egoi))
+nbAnim <- 2#max(Init$id)
+```
+
+"nbAnim" is the ID of the animal and/or simulation. Here there are two simulations, one for MAB and one for GB, and they are given the same starting lengths. Provincetown and Eel Pond will be two locations, and we can fit these runs to three independent data collections each for the three growth measurements. I'd like to start with this second experiment because temps also will be in the range for where we have data.
+
+### DEB model simulations
+
+Creation of the results database
+
+Number of returned parameters for fCalcDEB_4VE = 21
+
+```{r}
+Result<-array(NA, dim=c(ndt, 20, nbAnim)) # Make a 3D matrix [time, output value, individual]
+colnames(Result)<-c("jour","E","V","Er","DFM","L","e","PM","Pc1","f","Pg","Pa","Temp","cT","Xnum","Pl1","Pl2","Pm1","Pj","Pr")#name the parameters
+```
+
+Launch DEB for each individual
+
+```{r}
+n_iter <- length(Temp)
+
+ErBalance=matrix(0,ncol=n_iter/365,nrow=nbAnim)
+```
+
+Here modifying the code for simplicity, since nbAnim is set to 2
+
+for (i in 1:nbAnim) {}
+
+```{r}
+i <- 1
+
+## Initialisation du DEB
+  ########################
+  # V   = Init$Vi[i]
+  # E   = Init$Ei[i] 
+  # Er  = Init$Eri[i]
+  # 
+  # L=Init$Vi[i]^(1/3)/Param$Shape
+  
+#M. Roberts modification for field validation
+  Li <- biometrics_data[i,"Start_length"]/10 #In cm
+  V = (Param$Shape*Li)^3
+
+  ## Initialisation des sorties
+  #############################
+  # nombre d'itération
+  n_iter = length(Temp)
+  # Création de vecteurs contenant les variables d'état
+  vecteur_E   = vector("numeric",length=n_iter)
+  vecteur_V   = vector("numeric",length=n_iter)
+  vecteur_Er  = vector("numeric",length=n_iter)
+  vecteur_temps = vector("numeric",length=n_iter) 
+  
+  # Initialization of the state variables
+  vecteur_E[1]=E[1]
+  vecteur_V[1]=V[1]
+  vecteur_Er[1]=Er[1]
+  
+  vecteur_temps[1]=0    ####################Utile?
+  Balance=0
+  
+  vecteur_Pa   = vector("numeric",length=n_iter)
+  vecteur_Px   = vector("numeric",length=n_iter)
+  vecteur_PM   = vector("numeric",length=n_iter)
+  vecteur_Pc1  = vector("numeric",length=n_iter)
+  vecteur_Pg   = vector("numeric",length=n_iter)
+  vecteur_Pr   = vector("numeric",length=n_iter)
+  vecteur_Pj   = vector("numeric",length=n_iter)
+  vecteur_Pl1  = vector("numeric",length=n_iter)
+  vecteur_Pl2  = vector("numeric",length=n_iter)
+  vecteur_Pm1  = vector("numeric",length=n_iter)
+  vecteur_Em  = vector("numeric",length=n_iter)#################### utile?
+
+
+```
+
+### Temperature correction
+
+```{r}
+cT<-exp((Param$Ta /Param$T1)-(Param$Ta /Temp)) *
+  (1+exp((Param$Tal/Param$T1)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Param$T1)))/
+  (1+exp((Param$Tal/Temp)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Temp    ))) 
+
+```
+
+```{r}
+  Xk <- Param[27]
+  Param <- Param[-27]
+```
+
+```{r}
+
+  Growth_as_fcn_of_Xk <- function(par, data_len,  Food=Food, Param=Param, ndt=ndt, cT=cT, pH=pH, V=V, E=E, pdt=pdt, Er=Er, L=L, vecteur_E=vecteur_E, vecteur_V=vecteur_V, vecteur_Er=vecteur_Er, vecteur_temps=vecteur_temps, vecteur_Pa=vecteur_Pa, vecteur_Px=vecteur_Px, vecteur_Pr=vecteur_Pr, vecteur_Pj=vecteur_Pj, vecteur_PM=vecteur_PM, vecteur_Pc1=vecteur_Pc1, vecteur_Pg=vecteur_Pg, vecteur_Pl1=vecteur_Pl1, vecteur_Pl2=vecteur_Pl2, vecteur_Pm1=vecteur_Pm1, Result=Result, i=i, Temp=Temp, Xnum=Xnum) {
+    
+    Xk = par[1]
+    sigma = par[2]
+    
+    vecteur_f   = Food/(Food+Xk)
+    #vecteur_f   = Food/(Food+Param$Xk)
+
+  
+    ## Start of the calculation loop
+    ################################
+    #for (n in 1:n_iter){
+  n <- 1
+  
+  #Molly's edit: Just grow to 36mm, would be 481 iteractions
+  for (n in 1:ndt){
+  
+      #### Correction of biological functions impacted by Temperature  
+      Pxm =  Param$Pxm* cT[n]*Param$s_M
+      Pm=Param$Pm* cT[n] 
+      v = Param$v* cT[n] * Param$s_M
+      
+      
+      # Compound parameters corrected  
+      Pam = Pxm * Param$KappaX
+      Em  = Pam/v
+      KappaG = (Param$dv*Param$RhoV)/Param$Eg
+      Vp = (Param$Shape*Param$Lp)^3
+      if(pH[n]<=1011){cpH=1}else{cpH=(Param$pHh-pH[n])/(Param$pHh-Param$pHl)}
+      
+      
+      Px  <- Pxm * vecteur_f[n] * V^(2/3)  #Ingestion
+      
+      Pa  <- Pxm * vecteur_f[n] * V^(2/3) * Param$KappaX *cpH
+  
+      
+      Pc1 <- E * (((Param$Eg * (v/V^(1/3))) + Pm) / (Param$Eg + (Param$Kappa * (E/V))))#Mobilization from E
+  
+      
+      PM  <- (Pm * V)+(Param$del_pH*(min(max(pH[n]-Param$MpHl,0),Param$MpHh-Param$MpHl)*V^(2/3)))*cT[n]#Maintenance costs 
+  
+      Pm1 <- min(PM,Param$Kappa * Pc1) #maintenance costs paid
+      
+      Pg  <- Param$Kappa * Pc1 - Pm1 #Growth
+      
+      Pj  <- min(c(V,Vp)) * Pm * ((1 - Param$Kappa) / Param$Kappa) #Maturation
+      
+      Pr   <- max(c((1 - Param$Kappa)*Pc1 - Pj,0)) # Reproduction
+      
+      
+      
+  
+      #SANS GONADE
+      # In case of long starvation (i.e. maintenance costs cannot be paid):
+      if(Param$Kappa*Pc1<=PM){# Maintenance costs cannot be paid
+        E  = max(0, E   + (Pa - Pc1) * pdt)
+        Pl2=1/Param$GammaL2*(PM-(Param$Kappa*Pc1))
+        Pr=0
+        if(V>=Vp&Er>=Pl2){
+          Er=max(0, Er  - Pr-Pl2 * pdt)
+          V  = max(0, V)
+        }else{
+          Pl1=1/Param$GammaL1*(PM-Param$Kappa*Pc1)
+          Er=0
+          V  = max(0, V   + (-Pl1)/(Param$RhoV*Param$dv) * pdt)
+          Pl2=0
+        }
+  
+      }else{
+        Pl1=0
+        Pl2=0
+        # State variables calculation
+        E  = max(0, E   + (Pa - Pc1) * pdt)
+        V  = max(0, V   + (Pg/Param$Eg-Pl1) * pdt)
+        Er = max(0, Er  + (Pr - Pl2) * pdt)
+        if(V<Vp){Er=0}}
+      
+      ## More outputs 
+      ###############
+      DFM = (E+Er)/Param$RhoE + Param$dv*V #+ Ego*Param$dgo/Param$EGgo# Dry flesh mass
+      if(V^(1/3)/Param$Shape>=L){
+        L=V^(1/3)/Param$Shape
+      }
+      e = (E/V)/Em 
+      
+      
+      # State variables allocation
+      vecteur_E[n]   = E
+      vecteur_V[n]   = V
+      vecteur_Er[n]  = Er
+      
+      # Output variables
+      vecteur_temps[n]= n*pdt
+      vecteur_Pa[n]   = Pa
+      vecteur_Px[n]   = Px
+      vecteur_Pr[n]   = Pr
+      vecteur_Pj[n]   = Pj
+      vecteur_PM[n]   = PM
+      vecteur_Pc1[n]  = Pc1
+      vecteur_Pg[n]   = Pg
+  
+      vecteur_Pl1[n]  =Pl1
+      vecteur_Pl2[n]  =Pl2
+      vecteur_Pm1[n]  =Pm1
+      
+      Result[n,1:20,i]=c(n,E,V,Er,DFM,L,e,PM,Pc1,vecteur_f[n],Pg,Pa,Temp[n],cT[n],Xnum[n],Pl1,Pl2,Pm1,Pj,Pr)#,Ego)
+      #print(paste("/ day",n))
+      } 
+    #print(paste("/ ind.",i)) #Individual 1
+    Length <- Result[[n,6,1]]
+    NLL <- -sum(dnorm(x = data_len, mean = Length, sd = sigma, log = TRUE))
+    return(NLL)
+   }
+
+
+
+```
+
+```{r}
+optim(
+      par = c(Xk=1, sigma = .1), 
+      data_len = 1.2,
+      fn = Growth_as_fcn_of_Xk, 
+      Food=Food, 
+      Param=Param, 
+      ndt=ndt, 
+      cT=cT, 
+      pH=pH, 
+      V=V, 
+      E=E, 
+      pdt=pdt, 
+      Er=Er, 
+      L=L, 
+      vecteur_E=vecteur_E, 
+      vecteur_V=vecteur_V, 
+      vecteur_Er=vecteur_Er, 
+      vecteur_temps=vecteur_temps, 
+      vecteur_Pa=vecteur_Pa, 
+      vecteur_Px=vecteur_Px, 
+      vecteur_Pr=vecteur_Pr, 
+      vecteur_Pj=vecteur_Pj, 
+      vecteur_PM=vecteur_PM, 
+      vecteur_Pc1=vecteur_Pc1, 
+      vecteur_Pg=vecteur_Pg, 
+      vecteur_Pl1=vecteur_Pl1, 
+      vecteur_Pl2=vecteur_Pl2, 
+      vecteur_Pm1=vecteur_Pm1, 
+      Result=Result, 
+      i=i, 
+      Temp=Temp, 
+      Xnum=Xnum)
+```
+
+Molly's plots and calculations
+
+```{r}
+Result[1,,1]
+Length_out <- Result[,6,1][1:481]
+Pa_out <- Result[,12,][1:481]
+Day <-  Result[,1,][1:481]
+
+plot(Day/365,Pa_out,type='l',lwd=2,
+         #ylim=c(0,20),xlim=c(0,25),
+         #ylab=ylabel,cex.lab=2,
+         xlab="Time (y)",cex.axis=2)
+     #,xlim=c(0,length(Resultmean)/365+0.25))
+   #text(0,19.5,"(B)")
+
+plot(Day/365,Length_out,type='l',lwd=2,
+         #ylim=c(0,20),xlim=c(0,25),
+         #ylab=ylabel,cex.lab=2,
+         xlab="Time (y)",cex.axis=2)
+     #,xlim=c(0,length(Resultmean)/365+0.25))
+   #text(0,19.5,"(B)")
+```
+
+Now for day 482... let's see how this is affected by pH, temp, and food.
+
+First let's create a dataframe that includes all average temperatures. This is "df_summary" from Biodeposition_SW_Summary.qmd
+
+```{r}
+SW_cond <- read.csv(paste(dir_data_biodep,"Output/SW_cond_averages.csv", sep = ""), stringsAsFactors = FALSE)
+```
+
+```{r}
+
+Temp_vec <- SW_cond$Temp+273
+
+cT_vec<-exp((Param$Ta /Param$T1)-(Param$Ta /Temp_vec)) *
+  (1+exp((Param$Tal/Param$T1)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Param$T1)))/
+  (1+exp((Param$Tal/Temp_vec)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Temp_vec    ))) 
+
+pH_vec <- SW_cond$pCO2 #Note these are all below the pCO2 threshold
+
+# Calc correction factor for pH on feeding: 
+# (Converted to vector calculation rather than for-loop used below. This should be faster.)
+cpH_vec <- seq(from = 1, t=6, length.out = length(pH_vec))
+cpH_vec[pH_vec<=1011] <- 1
+cpH_vec[pH_vec>1011] <- (Param$pHh-pH_vec[pH_vec>1011])/(Param$pHh-Param$pHl)
+
+```
+
+Estimate food based on chlorophyll from biodeposition
+
+```{r}
+  vecteur_f   = Food/(Food+Param$Xk)
+  Bio_food_Eel_Sep <- 1.109
+  vecteur_f_Eel_Sep   <- 
+    Bio_food_Eel_Sep/(Bio_food_Eel_Sep+Param$Xk)
+  
+  vecteur_f_point <- vecteur_f_Eel_Sep
+```
+
+Let's calculate Pa as a function of temperature. I commented out the later parts because there was an issue with each temp output being used to increment length/everything... Just focusing on feeding Pa or Px, depending on what is interesting.
+
+```{r}
+n<- 482
+    #### Correction of biological functions impacted by Temperature  
+Pa_vec <- rep(NA, length.out = length(cT_vec))
+
+for (j in 1:length(cT_vec)){
+
+  #j<-1
+#New plots as a function of temperature and pCO2
+    Pxm =  Param$Pxm* cT_vec[j]*Param$s_M
+    Pm=Param$Pm* cT_vec[j] 
+    v = Param$v* cT_vec[j] * Param$s_M
+    
+    
+    # Compound parameters corrected  
+    Pam = Pxm * Param$KappaX
+    Em  = Pam/v
+    KappaG = (Param$dv*Param$RhoV)/Param$Eg
+    Vp = (Param$Shape*Param$Lp)^3
+
+        # This corrects for pCO2's 1011 and above. 
+    
+    
+    Px  <- Pxm * vecteur_f_point * V^(2/3)  #Ingestion
+    
+    Pa  <- Pxm * vecteur_f_point * V^(2/3) * Param$KappaX *cpH #KappaX is the digesion efficiency of foot to reserve
+
+    Pa_vec[j]  <- Pxm * vecteur_f_point * V^(2/3) * Param$KappaX *cpH_vec[j]
+}
+
+```
+
+Surface specific assimilation (I think) as a function of temperature
+
+```{r}
+
+Temp_vec_line <- seq(from = 10,to = 25, by =.01) +273
+
+cT_vec_line<-exp((Param$Ta /Param$T1)-(Param$Ta /Temp_vec_line)) *
+  (1+exp((Param$Tal/Param$T1)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Param$T1)))/
+  (1+exp((Param$Tal/Temp_vec_line)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Temp_vec_line))) 
+
+plot(Temp_vec_line-273,cT_vec_line)
+
+plot(Temp_vec-273,cT_vec,type='p',
+         ylim=c(0,1),xlim=c(10,25),
+         #ylab=ylabel,cex.lab=2,
+         xlab=expression(paste("Temp",degree," C")),cex.axis=1)
+     #,xlim=c(0,length(Resultmean)/365+0.25))
+   #text(0,19.5,"(B)")+
+#lines(Temp_vec_line-273,cT_vec_line)
+
+df.new <- data.frame(
+  Temp_vec_line=Temp_vec_line, 
+  cT_vec_line=cT_vec_line
+  )
+
+df.new.2 <- data.frame(
+  Temp_vec=Temp_vec, 
+  cT_vec=cT_vec
+  )
+
+head(df.new)
+ggplot(data = df.new, aes(x=Temp_vec_line-273, y=cT_vec_line)) +
+  geom_line( aes(colour = Temp_vec_line-273))+
+  ylab("Observed absorbance Rate (mg / hr)")+
+  xlab("Predicted assimilation Rate (J / hr)")
++
+  geom_point(data = df.new.2,aes(x=Temp_vec-273, y=cT_vec, colour = Temp_vec-273))
+  #geom_line(df.new.2, aes(colour = Temp_vec-273))
+```
+
+```{r}
+SW_cond$Temp_coeff_feed <- cT_vec
+SW_cond$pCO2_coeff_feed <- cpH
+SW_cond$Pred_ingestion <- Pa_vec
+write.csv(SW_cond, paste(dir_data_biodep,"Output/Ingestion_pred_from_DEB.csv", sep = ""))
+```
