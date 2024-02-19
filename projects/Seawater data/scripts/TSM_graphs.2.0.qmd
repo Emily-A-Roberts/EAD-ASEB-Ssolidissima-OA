@@ -213,7 +213,8 @@ p+labs(x="Date", y = "Total Chl (ug/L) to POM (mg / L) ratio")+
 ```
 
 ```{r}
-df_transplant <- df_summary[df_summary$Site=="Provincetown"|df_summary$Site=="Eel Pond",]
+df_transplant <- df_summary[df_summary$Site=="N. Cape: Provincetown Bay"|df_summary$Site=="S. Cape: Eel Pond E Falmouth",]
+df_transplant <- df_transplant[!is.na(df_transplant$Site),]
 df_transplant <- df_transplant[as.Date(df_transplant$Date.factor)>=as.Date("2022-01-01"),]
 
 p<- ggplot(df_transplant, aes(x=as.Date(Date.factor), y=POM, group=Site, color=Site)) + 
@@ -221,10 +222,35 @@ p<- ggplot(df_transplant, aes(x=as.Date(Date.factor), y=POM, group=Site, color=S
   geom_point()+
   geom_errorbar(aes(ymin=POM-POM_SE, ymax=POM+POM_SE), width=.2,
                 position=position_dodge(0.05))
-p+labs(x="Date", y = "POM (mg/L)")+
-  theme_classic() +
-  scale_color_manual(values = new.pal)
+#p+labs(x="Date", y = "POM (mg/L)")+
+#  theme_classic() +
+#  scale_color_manual(values = new.pal)
+p
+```
 
+Use approx function to estimate daily TSM
+
+```{r}
+
+df_transplant.P <- df_summary[df_summary$Site=="N. Cape: Provincetown Bay",]
+df_transplant.P <- df_transplant.P[!is.na(df_transplant.P$Site),]
+df_transplant.P <- df_transplant.P[as.Date(df_transplant.P$Date.factor)>=as.Date("2022-01-01"),]
+
+POM.approx.P <- approx(as.Date(df_transplant.P$Date.factor), df_transplant.P$POM, xout=seq(min(df_transplant.E$Date.factor), max(df_transplant.E$Date.factor), "days"))
+
+plot(POM.approx.P)
+
+df_transplant.E <- df_summary[df_summary$Site=="S. Cape: Eel Pond E Falmouth",]
+df_transplant.E <- df_transplant.E[!is.na(df_transplant.E$Site),]
+df_transplant.E <- df_transplant.E[as.Date(df_transplant.E$Date.factor)>=as.Date("2022-01-01"),]
+
+POM.approx.E <- approx(as.Date(df_transplant.E$Date.factor), df_transplant.E$POM, xout=seq(min(df_transplant.E$Date.factor), max(df_transplant.E$Date.factor), "days"))
+
+plot(POM.approx.E)
+points(POM.approx.P)
+
+write.csv(POM.approx.P, file="~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/TSM and Chl/Output_data/dailyPOMest.Prov.csv")
+write.csv(POM.approx.E, file="~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/TSM and Chl/Output_data/dailyPOMest.Eel.csv")
 ```
 
 Monthly summary

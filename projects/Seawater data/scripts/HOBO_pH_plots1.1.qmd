@@ -1265,17 +1265,22 @@ write.csv(all.data.wk, file="Summary_weekly_ave.csv")
 write.csv(all.data.dy, file="Summary_daily_ave.csv")
 ```
 
-### Compare with surfclam carbonate chemistry data
+## Compare with surfclam carbonate chemistry data
 
 ```{r}
 dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/"
-carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.csv", sep = ""), stringsAsFactors = FALSE)
+#carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.csv", sep = ""), stringsAsFactors = FALSE)
+carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_corrected.csv", sep = ""), stringsAsFactors = FALSE)
 carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%y")
 carb_dat <- carb_dat[!is.na(carb_dat$Date),]
 carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
 carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
 carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
 carb_dat$Site <- as.factor(carb_dat$Site)
+
+carb_dat$InSitu.pH <- carb_dat$pH..pH.Alk.
+carb_dat$Water.Sediment..Temp <- carb_dat$Water.Sed..Temp
+carb_dat <- carb_dat[carb_dat$Bad.data!="y",] #Exclude values Matt marked as likely questionable data
 ```
 
 ```{r}
@@ -1287,6 +1292,7 @@ sampling.temp <- data.frame(
   x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
   y = rep(0,6)
 )
+
 
 gg1 <- ggplot(all.data.dy, aes(x=Date, y=pH, colour = Site))+
   geom_line(cex = 1)+
@@ -1709,6 +1715,12 @@ carb_dat$season <- factor(carb_dat$season, levels=c("Autumn", "Winter","Spring",
 Ptown.sed$season <- factor(Ptown.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
 Eel.sed$season <- factor(Eel.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
 
+
+```
+
+### Break carb dat dataset into two groups
+
+```{r}
 carb_dat.P <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Ptown",]
 carb_dat.E <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Eel",]
 
@@ -1766,6 +1778,8 @@ ggplot(Eel.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
   geom_line()+
   facet_wrap(~season) +  ggtitle("Eel Pond")
 
+
+
 ```
 
 ```{r}
@@ -1806,4 +1820,88 @@ ggplot(Eel.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
 # #+
 #  # ylim(7.5,8.5)+
 #   #xlim(7.5,8.5)
+```
+
+## Output daily environmental data for DEB model
+
+I just want a general sense of pCO2 at the two sites to use in the model.
+
+```{r}
+unique(carb_dat.P$Shell.treatment)
+
+subset <- carb_dat.E[carb_dat.E$Shell.treatment=="outside cage"|carb_dat.E$Shell.treatment=="monitoring",]
+subset <- subset[subset$Stratum=="Bottom water",]
+
+pCO2.approx.E <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+subset <- carb_dat.P[carb_dat.P$Shell.treatment=="outside cage"|carb_dat.P$Shell.treatment=="monitoring",]
+subset <- subset[subset$Stratum=="Bottom water",]
+
+pCO2.approx.P <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+tail(pCO2.approx.P$x)
+
+plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
+points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
+write.csv(pCO2.approx.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.P.csv")
+write.csv(pCO2.approx.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.E.csv")
+```
+
+Temp output - use sediment temp
+
+This can be used for the second experiment. The first summer experiment doesn't have temp loggers in the sediment
+
+```{r}
+
+Eel_sediment$Date <- as.Date(Eel_sediment$Date)
+Ptown_sediment$Date <- as.Date(Ptown_sediment$Date)
+
+
+Temp.day.sed.E <- aggregate(Eel_sediment[,c("Temp")], 
+                         list(Date = cut(Eel_sediment[,c("Date")], 
+                                         breaks="day")), 
+                         mean, na.rm = TRUE)
+
+Temp.day.sed.P <- aggregate(Ptown_sediment[,c("Temp")], 
+                         list(Date = cut(Ptown_sediment[,c("Date")], 
+                                         breaks="day")), 
+                         mean, na.rm = TRUE)
+
+plot(as.Date(Temp.day.sed.P$Date),Temp.day.sed.P$x, col = "orange")
+points(as.Date(Temp.day.sed.E$Date),Temp.day.sed.E$x, col = "green")
+
+write.csv(Temp.day.sed.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.P.csv")
+write.csv(Temp.day.sed.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.E.csv")
+
+```
+
+Now recalculate from pH measurements from within the cages.
+
+```{r}
+library(dplyr)
+
+#unique(carb_dat.P$)
+
+subset <- carb_dat.E[carb_dat.E$Shell.treatment=="No Shell"|carb_dat.E$Shell.treatment=="Shell",]
+subset <- subset[subset$Stratum=="Bottom water",]
+subset <- subset %>% 
+      group_by(Date) %>% 
+      summarize(pCO2..pH.Alk. = mean(pCO2..pH.Alk., na.rm = TRUE)) 
+
+pCO2.approx.E <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+subset <- carb_dat.P[carb_dat.P$Shell.treatment=="No Shell"|carb_dat.P$Shell.treatment=="Shell",]
+subset <- subset[subset$Stratum=="Bottom water",]
+subset <- subset %>% 
+      group_by(Date) %>% 
+      summarize(pCO2..pH.Alk. = mean(pCO2..pH.Alk., na.rm = TRUE)) 
+
+pCO2.approx.P <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+tail(pCO2.approx.P$x)
+
+plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
+points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
+write.csv(pCO2.approx.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.P.csv")
+write.csv(pCO2.approx.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.E.csv")
 ```

@@ -5,7 +5,7 @@ date: "2023-12-02"
 author: "Emily Roberts"
 subtitle: "Growth predictions from environmental conditions"
 abstract: |
- I'm running Emilien's code and figuring out how to use it to predict growth under different environmental conditions. 
+ I'm running Emilien's code and figuring out how to use it to predict growth under different environmental conditions. I think this an intermediate file and not actually useful. See earlier version 1.0.1 for functional code. 
 
 #format: html
 format: 
