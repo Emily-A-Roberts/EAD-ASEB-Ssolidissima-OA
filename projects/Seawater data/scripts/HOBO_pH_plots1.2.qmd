@@ -1,0 +1,2169 @@
+---
+title: "pH_HOBO_plots 1.2"
+author: "Emily Roberts"
+format: html
+# format: 
+#   pdf:
+#     toc: TRUE
+#     number-sections: TRUE
+#     colorlinks: TRUE
+editor: visual
+
+params:
+   Total_scale_corr: TRUE #Or false
+
+date: 2024-03-15
+date-format: short
+abstract: "1.2) My goal is to better organize this so it is not such a long script. Also since updating this there is a bug in plotting some of the YSI data, so I'd like to fix that. Updated HOBO pH unknown offsets to reflect mean offsets for each pH probe using the serial number, rather than mean offsets for all HOBO pH's. 3.15.24 1.1) Trim individual files to time deployed and retrieved, then compile and visualize the data. Also compare HOBO pH data to sediment temp data, YSI data, and HOBO conductivity data. A note about HOBO EST vs. EDT. It seems that this switch happens when these get calibrated, not actually during the time change. This means that GMT should be estimated separately from each file. I could not find this in the manual and want to call the company to confirm.-3.17.24 "
+---
+
+## Set up workspace
+
+```{r}
+#| include: FALSE
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(lubridate)
+library("viridis")  
+
+
+
+data_combined_new <- data.frame(
+  Site = NA,
+  Date = NA,
+  Temp = NA,
+  pH = NA
+)
+
+# working directories
+wdDen <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata/Dennis"
+wdPtown <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata/Ptown"
+wdEel <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata/Eel_Pond"
+```
+
+### Dennis
+
+```{r}
+setwd(wdDen)
+filenames <- dir()
+#filenames
+```
+
+```{r}
+setwd(wdDen)
+# Late June to early Aug
+#(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+open_file <- "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+#Also works: (open_file <- filenames[2]) # "1230_East_Dennis 2022-09-21 09_29_48 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV","Ch..3...pH....pH." )
+
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+
+df <- df[df$datetime<"2022-08-04 00:08:00 EDT",]
+
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 230
+tris <- 8.34
+tris_temp <- 24.05
+
+data_combined_new <- 0
+data_combined_new <- data.frame(
+  Site = rep("Den",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined_new)
+```
+
+```{r}
+# setwd(wdDen)
+# # Late June to early Aug
+# #(open_file <- filenames[1]) # "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+# open_file <- "1230_East_Dennis 2022-08-05 16_12_44 EDT (Data EDT).csv"
+# #Also works: (open_file <- filenames[2]) # "1230_East_Dennis 2022-09-21 09_29_48 EDT (Data EDT).csv"
+# df <- read.csv(open_file, stringsAsFactors = F)
+# df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+# plot(df$datetime, df$Ch..3...pH....pH.)
+# df <- df[df$datetime<"2022-08-04 00:00:00 EDT",]
+# plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+# plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+# plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+# 
+# #Metadata
+# SN <- 230
+# tris <- 8.34
+# tris_temp <- 24.05
+# 
+# data_combined_new <- data.frame(
+#   Site = rep("Den",times = nrow(df)),
+#   Date = df$datetime,
+#   Temp = df$Ch..1...Temperature.....C..,
+#   pH = df$Ch..3...pH....pH.,
+#   Tris = rep(tris,length(df$datetime)),
+#   Tris_temp = rep(tris_temp,length(df$datetime)),
+#   Serial_number = rep(SN,length(df$datetime))
+# )
+# 
+# 
+# data_combined <- rbind(data_combined_new)
+
+```
+
+```{r}
+setwd(wdDen)
+# Aug to mid September
+#"Den_077 2022-09-14 14_08_26 EDT (Data EDT).csv" 
+#"Den_077 2022-09-21 09_28_37 EDT (Data EDT)(1).csv" is the same file read out later on
+#(open_file <- filenames[3])
+open_file <- "Den_077 2022-09-14 14_08_26 EDT (Data EDT).csv" 
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV","Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2022-08-05 00:00:00 EDT",]
+df <- df[df$datetime<"2022-09-13 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 077
+tris <- 8.16
+tris_temp <- 23.98
+
+data_combined_new <- data.frame(
+  Site = rep("Den",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+#head(data_combined_new)
+#tail(data_combined_new)
+
+```
+
+### Ptown
+
+```{r}
+setwd(wdPtown)
+filenames <- dir()
+filenames
+```
+
+```{r}
+setwd(wdPtown)
+# mid June to August
+open_file <- "20573560_Ptown 2022-08-05 17_08_58 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+#head(df)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV","Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime<"2022-08-03 00:08:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 560
+tris <- 8.17
+tris_temp <- 24.15
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+```
+
+```{r}
+setwd(wdPtown)
+# August
+(open_file <- filenames[6])
+open_file <- "Ptown_075 2022-08-29 21_52_54 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+#head(df)
+#tail(df)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2022-08-04 00:00:00 EDT",]
+df <- df[df$datetime<"2022-08-29 00:00:00 EDT",]
+#plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+#plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+#plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 075
+tris <- 8.14
+tris_temp <- 25.11
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+```
+
+SN560 8/28/22
+
+Tris 8.20pH, 24.73C
+
+```{r}
+setwd(wdPtown)
+# September
+# Also is here: "20573560_Ptown 2022-11-02 15_02_10 EDT (Data EDT).csv"
+open_file <- "Ptown_20573560_Ptown 2022-09-29 17_27_52 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+#head(df)
+#tail(df)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2022-08-30 00:00:00 EDT",]
+df <- df[df$datetime<"2022-09-26 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 560
+tris <- 8.20
+tris_temp <- 24.73
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+```
+
+```{r}
+setwd(wdPtown)
+# early October
+# This sensor seems to be deployed at Eel pond originally, recalibrated without a change in the name, 
+# and then moved to Ptown. The segment at Ptown starts late in the day on 9/27/22
+filenames
+open_file <- "21333340_Eel_Pond 2022-11-07 15_11_16 EST (Data EST)_actuallyPtown.csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+#head(df)
+#tail(df,80)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Switch to EST????
+plot(df$datetime, df$Ch..3...pH....pH.)
+# df <- df[df$datetime>"2022-09-25 00:00:00 EDT",]
+# df <- df[df$datetime<"2022-09-29 13:00:00 EDT",]
+df <- df[df$datetime>"2022-09-28 00:00:00 EDT",]
+df <- df[df$datetime<"2022-10-11 12:00:00 EDT",]
+#df <- df[df$datetime<"2022-10-12 00:00:00 EDT",]
+#df <- df[df$datetime<"2022-11-07 13:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "p")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 340
+tris <- NA
+tris_temp <- NA
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+```
+
+```{r}
+setwd(wdPtown)
+# late October
+# This sensor seems to be deployed at Eel pond originally, recalibrated without a change in the name, 
+# and then moved to Ptown. The segment at Ptown starts late in the day on 9/27/22
+#filenames
+open_file <- "21333340_Eel_Pond 2022-11-07 15_11_16 EST (Data EST)_actuallyPtown.csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+
+#head(df)
+#tail(df,80)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Switch to EST????
+plot(df$datetime, df$Ch..3...pH....pH.)
+#df <- df[df$datetime>"2022-09-28 00:00:00 EDT",]
+#df <- df[df$datetime<"2022-10-11 06:00:00 EDT",]
+df <- df[df$datetime>"2022-10-12 10:00:00 EDT",]
+df <- df[df$datetime<"2022-11-06 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+plot(x = tail(df$datetime,200), y = tail(df$Ch..1...Temperature.....C..,200), type = "l")
+
+#Metadata
+SN <- 340
+tris <- NA
+tris_temp <- NA
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+```
+
+```{r}
+#Moved up from Eel. It seems like this sensor was previously an Eel Pond sensor but was moved up to Ptown on 11/07 and the name was not changed. This conclusion is made because this file matches the Ptown point samples for carbonate chemistry, not the Eel Pond carbonate chemistry samples. There was some confusion in pH sensor handing off between Matt and Molly and not adequate notes on this. 
+
+setwd(wdEel)
+# November
+#(open_file <- filenames[3])
+open_file <- "20573560_Ptown 2022-12-05 16_55_15 EST (Data EST)_actuallyEel.csv"
+
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2022-11-07 00:00:00 EDT",]
+df <- df[df$datetime<"2022-12-05 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+plot(x = head(df$datetime,200), y = head(df$Ch..1...Temperature.....C..,200), type = "l")
+
+
+
+
+#Metadata
+SN <- 560
+tris <- 8.30
+tris_temp <- 22.37
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdPtown)
+# skip to April to avoid freezing temps
+
+open_file <- "20573560_Ptown 2023-05-10 14_13_07 EDT (Data EDT).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C.","mV",
+               "Ch..3...pH....pH." )
+
+#head(df)
+#tail(df,80)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%y %H:%M")) #Switch to EDT from EST?
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2023-04-18 15:15:15",]
+df <- df[df$datetime<"2023-05-10 09:00:00",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C., type = "l")
+length(df$Ch..1...Temperature.....C.)
+
+plot(df$Ch..1...Temperature.....C., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 560
+tris <- 8.298 #Updated 12/23/23
+tris_temp <- 21.4 #Updated 12/23/23
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = length(df$datetime)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C.,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,times = length(df$datetime)),
+  Serial_number = rep(SN,times = length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+
+setwd(wdPtown)
+# skip to April to avoid freezing temps
+
+open_file <- "340_Ptown 2023-06-11 14_35_41 EDT (Data EDT)(1).csv" 
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C.","mV",
+               "Ch.3...pH....pH." )
+
+#head(df)
+#tail(df,80)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M")) #Switch to EDT from EST?
+plot(df$datetime, df$Ch.3...pH....pH.)
+df <- df[df$datetime>"2023-05-10 09:45:00",]
+df <- df[df$datetime<"2023-06-11 11:45:00",]
+plot(df$datetime, df$Ch.3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C., type = "l")
+length(df$Ch..1...Temperature.....C.)
+
+plot(df$Ch..1...Temperature.....C., df$Ch.3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 340
+tris <- 8.19
+tris_temp <- 21.3
+
+data_combined_new <- data.frame(
+  Site = rep("Ptown",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C.,
+  pH = df$Ch.3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+### Eel Pond
+
+```{r}
+setwd(wdEel)
+filenames <- dir()
+filenames
+```
+
+```{r}
+setwd(wdEel)
+#mid June to Aug
+#(open_file <- filenames[2])
+(open_file <- "21333340_Eel_Pond 2022-08-05 17_43_02 EDT (Data EDT).csv")
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime<"2022-08-01 00:09:00 EDT",]
+df <- df[df$datetime>"2022-06-17 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 340
+tris <- 8.14
+tris_temp <- 24.73
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+# Aug to lateAug is on logger that is still logging in Eel Pond and 
+# needs to be retrieved.
+# There was an issue with the tool when swapping them out
+
+```
+
+```{r}
+setwd(wdEel)
+#Aug to lateAug
+(open_file <- filenames[4])
+(open_file <- "Eel_076 2022-09-27 13_35_57 EDT (Data EDT).csv")
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime<"2022-08-30 00:00:00 EDT",]
+df <- df[df$datetime>"2022-08-02 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 076
+tris <- 8.15
+tris_temp <- 24.85
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+# Aug to lateAug is on logger that is still logging in Eel Pond and 
+# needs to be retrieved.
+# There was an issue with the tool when swapping them out
+
+
+# # lateAug to mid Sep (was still logging and deployed - 
+# # but lost ~14 days of data due to calibrating before downloading data)
+# (open_file <- filenames[3])
+# open_file <- "21333340_Eel_Pond 2022-09-11 18_27_18 EDT (Data EDT).csv"
+# 
+# df <- read.csv(open_file, stringsAsFactors = F)
+# df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S"))
+# plot(df$datetime, df$Ch..3...pH....pH.)
+# df <- df[df$datetime>"2022-08-31 00:00:00 EDT",]
+# df <- df[df$datetime<"2022-09-11 00:00:00 EDT",]
+# plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+# plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+# plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+# 
+# data_combined_new <- data.frame(
+#   Site = rep("Eel",times = nrow(df)),
+#   Date = df$datetime,
+#   Temp = df$Ch..1...Temperature.....C..,
+#   pH = df$Ch..3...pH....pH.
+# )
+# 
+# 
+# data_combined <- rbind(data_combined,data_combined_new)
+
+```
+
+```{r}
+setwd(wdEel)
+# #October???
+# #October is not clear.
+# #If the other legger was still logging and deployed at this site
+# (open_file <- filenames[3])
+# open_file <- "Eel_076 2022-11-07 15_16_01 EST (Data EST)(1).csv"
+# head(df, 20)
+# df <- read.csv(open_file, stringsAsFactors = F)
+# df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+# plot(df$datetime, df$Ch..3...pH....pH.)
+#  df <- df[df$datetime>"2022-09-25 00:00:00 EDT",]
+# # df <- df[df$datetime<"2022-09-30 00:00:00 EDT",]
+# 
+# #df <- df[df$datetime<"2022-08-31 00:00:00 EDT",]
+# #df <- df[df$datetime>"2022-08-26 00:00:00 EDT",]
+# plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+# plot(df$datetime, df$Ch..1...Temperature.....C.., type = "p")
+# plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+# 
+# data_combined_new <- data.frame(
+#   Site = rep("Eel",times = nrow(df)),
+#   Date = df$datetime,
+#   Temp = df$Ch..1...Temperature.....C..,
+#   pH = df$Ch..3...pH....pH.
+# )
+# 
+# 
+# data_combined <- rbind(data_combined,data_combined_new)
+
+# October
+# This sensor seems to be deployed at Eel pond originally, recalibrated without a change in the name, 
+# and then moved to Ptown. The segment at Eel Pond ends on Monday 9/26/22.
+# It was deployed on 8/31/22. Which is a day we were at Eel Pond
+filenames
+open_file <- "21333340_Eel_Pond 2022-11-07 15_11_16 EST (Data EST)_actuallyPtown.csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Switch to EST? 
+
+plot(df$datetime, df$Ch..3...pH....pH.)
+# df <- df[df$datetime>"2022-09-25 00:00:00 EDT",]
+# df <- df[df$datetime<"2022-09-29 13:00:00 EDT",]
+df <- df[df$datetime>"2022-08-31 00:00:00 EDT",]
+df <- df[df$datetime<"2022-09-26 07:00:00 EDT",] #Was previously set to 1PM cutoff, but changed to 7AM cutoff. Must have removed pH logger in the morning, not the evening sampling according to the difference between the temp of the pH logger and sediment temperature. -ER 4/1/24
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "p")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+
+#Metadata
+SN <- 340
+tris <- 8.18
+tris_temp <- 24.73
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+
+
+
+
+```
+
+```{r}
+setwd(wdEel)
+# Early October
+#(open_file <- filenames[3])
+open_file <- "Eel_076 2022-11-07 15_16_01 EST (Data EST)(1).csv"
+#head(df, 20)
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2022-09-29 00:00:00 EDT",]
+df <- df[df$datetime<"2022-10-24 00:00:00 EDT",]
+#df <- df[df$datetime<"2022-11-06 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 076
+tris <- NA
+tris_temp <- NA
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdEel)
+# late October
+#(open_file <- filenames[3])
+open_file <- "Eel_076 2022-11-07 15_16_01 EST (Data EST)(1).csv"
+#head(df, 20)
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+plot(df$datetime, df$Ch..3...pH....pH.)
+#df <- df[df$datetime>"2022-09-29 00:00:00 EDT",]
+df <- df[df$datetime>"2022-10-25 00:00:00 EDT",]
+df <- df[df$datetime<"2022-11-06 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 076
+tris <- 8.38
+tris_temp <- 16.13
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdPtown)
+# November
+# This last file seems a bit out of place. However, I can confirm that this is Provincetown because it was collected on 12/4 not 12/5.It is deployed by 11/7/23 15:30, which is later than our Ptown date, because I did a one day trip where I met Matt to pick up the sensor and deployed it. It would have previously been deployed in Eel Pond.
+
+#I need to revisit this because the way I explained it above, the pH's don't match with the point carbonate chemistry samples.I'm moving it down to Eel Pond.
+
+open_file <- "Ptown_076 2022-12-05 21_20_00 EST (Data EST).csv"
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EST.", "Ch..1...Temperature.....C..","mV",
+               "Ch..3...pH....pH." )
+
+head(df)
+tail(df,80)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EST., format = "%m/%d/%Y %H:%M:%S")) #Switch to EST????
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2022-11-07 13:00:00 EDT",]#"2022-11-07 13:00:00 EDT"
+df <- df[df$datetime<"2022-12-04 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l")
+plot(df$Ch..1...Temperature.....C.., df$Ch..3...pH....pH., pch = '.')
+
+plot(df$datetime, df$Ch..3...pH....pH., type = "l", xlim = as.POSIXct(c("2022-11-20 00:00:00 EDT","2022-11-25 00:00:00 EDT")))
+
+plot(df$datetime, df$Ch..1...Temperature.....C.., type = "l", xlim = as.POSIXct(c("2022-11-20 00:00:00 EDT","2022-11-25 00:00:00 EDT"))) #It looks like the pH probe got down below 4C at low tide. 
+
+#Metadata
+SN <- 076
+tris <- 8.3
+tris_temp <- 22.37
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C..,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdEel)
+# May
+#(open_file <- filenames[3])
+open_file <- "21333340_Eel_Pond 2023-05-08 09_10_54 EDT (Data EDT).csv"
+
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch..1...Temperature.....C.","mV",
+               "Ch..3...pH....pH." )
+
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S")) #Change to EST
+plot(df$datetime, df$Ch..3...pH....pH.)
+df <- df[df$datetime>"2023-04-19 17:00:00 EDT",]
+#df <- df[df$datetime<"2022-12-05 00:00:00 EDT",]
+plot(df$datetime, df$Ch..3...pH....pH., type = "l")
+plot(df$datetime, df$Ch..1...Temperature.....C., type = "l")
+plot(df$Ch..1...Temperature.....C., df$Ch..3...pH....pH., pch = '.')
+
+#Metadata
+SN <- 340
+tris <- 8.37
+tris_temp <- 18.00
+
+data_combined_new <- data.frame(
+  Site = rep("Eel",times = nrow(df)),
+  Date = df$datetime,
+  Temp = df$Ch..1...Temperature.....C.,
+  pH = df$Ch..3...pH....pH.,
+  Tris = rep(tris,length(df$datetime)),
+  Tris_temp = rep(tris_temp,length(df$datetime)),
+  Serial_number = rep(SN,length(df$datetime))
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+```{r}
+setwd(wdEel)
+# June
+#(open_file <- filenames[3])
+open_file <- "Eel_076 2023-06-11 14_39_04 EDT (Data EDT).csv"
+
+df <- read.csv(open_file, stringsAsFactors = F)
+
+df <- df[,c(1:5)]
+#head(df)
+names(df) <- c("n","Date.Time..EDT.", "Ch.1...Temperature.....C.","mV",
+               "Ch.3...pH....pH" )
+
+#tail(df)
+df$datetime <- as.POSIXct(strptime(df$Date.Time..EDT., format = "%m/%d/%Y %H:%M:%S")) #EDT
+plot(df$datetime, df$Ch.3...pH....pH.)
+df <- df[df$datetime>"2023-05-08 07:30:00 EDT",]
+df <- df[df$datetime<"2023-06-09 10:45:00 EDT",]
+plot(df$datetime, df$Ch.3...pH....pH, type = "l")
+plot(df$datetime, df$Ch.1...Temperature.....C., type = "l")
+plot(df$Ch.1...Temperature.....C., df$Ch.3...pH....pH, pch = '.')
+
+#Metadata
+SN <- 076
+tris <- 8.33
+tris_temp <- 17.37
+
+
+data_combined_new <- data.frame(
+  Site = rep("Eel", times = length(df$datetime)),
+  Date = df$datetime,
+  Temp = df$Ch.1...Temperature.....C.,
+  pH = df$Ch.3...pH....pH,
+  Tris = rep(tris, length(df$datetime)),
+  Tris_temp = rep(tris_temp, times = length(df$datetime)),
+  Serial_number = rep(SN, times = length(df$datetime))
+)
+
+
+data_combined <- rbind(data_combined,data_combined_new)
+```
+
+## Combine
+
+```{r}
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata")
+
+write.csv(data_combined, file = "pH data combined.csv")
+# rm(list = ls())
+# data_combined <- read.csv("pH data combined.csv", stringsAsFactors = FALSE)
+
+g1 <- ggplot(data_combined, aes(x=Date, y=pH, colour = Site))+
+  geom_point(cex = .1) +
+  scale_color_manual(values=c("blue", "green", "orange"))
+g1
+
+g2 <- ggplot(data_combined, aes(x=Date, y=Temp, colour = Site))+
+  geom_point(cex = .1) +
+  scale_color_manual(values=c("blue", "green", "orange"))
+g2
+
+ggarrange(g1, g2)
+
+min(data_combined$Date)
+
+```
+
+## Calculate tris buffer offset and SW pH from NBS scale
+
+```{r}
+tris_at_temp <- function(Tris_temp) {
+  y=(11911.08-18.2499*35-0.039336*35*35)/(Tris_temp+273.15)+(-366.27059+0.53993607*35+0.00016329*35*35)+(64.52243-0.084041*35)*log(Tris_temp+273.15)-0.11149858*(Tris_temp+273.15)
+  return(y)
+}
+
+test_dat <- data_combined[1:5,]
+data_combined$offset <- data_combined$Tris-tris_at_temp(data_combined$Tris_temp)
+
+plot(data_combined$offset, na.rm = TRUE)
+
+#data_combined[is.na(data_combined$offset),]
+
+data_combined[is.na(data_combined$offset)&(data_combined$Serial_number==340),"offset"] <- 0.04
+data_combined[is.na(data_combined$offset)&(data_combined$Serial_number==076),"offset"] <- 0.02
+
+data_combined[is.na(data_combined$offset),] #This should not contain anything. 
+
+data_combined$pH_corr <- data_combined$pH-data_combined$offset 
+
+if(params$Total_scale_corr==TRUE){
+data_combined$pH <- data_combined$pH_corr}
+```
+
+### Plot tides
+
+```{r}
+# Plot tides
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Tides")
+#dir()
+tides.Ptown1 <- read.table("Ptown_Jul.txt", skip =14)
+tides.Ptown2 <- read.table("Ptown_Aug.txt", skip =14)
+tides.Ptown3 <- read.table("Ptown_Sep.txt", skip =14)
+tides.Ptown4 <- read.table("Ptown_Oct.txt", skip =14)
+tides.Ptown5 <- read.table("Ptown_Nov.txt", skip =14)
+tides.Ptown6 <- read.table("Ptown_Dec.txt", skip =14)
+tides.Ptown7 <- read.table("Ptown_Apr23.txt", skip =14)
+tides.Ptown8 <- read.table("Ptown_May23.txt", skip =14)
+tides.Ptown9 <- read.table("Ptown_Jun23.txt", skip =14)
+tides.Den1 <- read.table("Den_Jul.txt", skip =14)
+tides.Den2 <- read.table("Den_Aug.txt", skip =14)
+tides.Den3 <- read.table("Den_Sep.txt", skip =14)
+tides.Eel1 <- read.table("Hyannis_Jul.txt", skip =14)
+tides.Eel2 <- read.table("Hyannis_Aug.txt", skip =14)
+tides.Eel3 <- read.table("Hyannis_Sep.txt", skip =14)
+tides.Eel4 <- read.table("Hyannis_Oct.txt", skip =14)
+tides.Eel5 <- read.table("Hyannis_Nov.txt", skip =14)
+tides.Eel6 <- read.table("Hyannis_Dec.txt", skip =14)
+tides.Eel7 <- read.table("Hyannis_Apr23.txt", skip =14)
+tides.Eel8 <- read.table("Hyannis_May23.txt", skip =14)
+tides.Eel9 <- read.table("Hyannis_Jun23.txt", skip =14)
+
+tides.Ptown <- rbind(tides.Ptown1, tides.Ptown2, tides.Ptown3,
+                     tides.Ptown4, tides.Ptown5, tides.Ptown6,
+                     tides.Ptown7, tides.Ptown8, tides.Ptown9)
+tides.Den <- rbind(tides.Den1, tides.Den2, tides.Den3)
+tides.Eel <- rbind(tides.Eel1, tides.Eel2, tides.Eel3,
+                   tides.Eel4, tides.Eel5, tides.Eel6,
+                   tides.Eel7, tides.Eel8, tides.Eel9)
+
+tides <- data.frame(tides = rbind(tides.Ptown,tides.Den,tides.Eel),
+           Site = as.factor(c(rep("Ptown",times=nrow(tides.Ptown)),
+                     rep("Den",times=nrow(tides.Den)),
+                     rep("Eel",times=nrow(tides.Eel)))))
+names(tides)<- c("date","day","Time","Tideheight","Site")
+
+Date1 <- paste(tides$date,tides$Time,sep=" ")
+
+tides$Date <- as.POSIXct(strptime(Date1,format = "%Y/%m/%d %H:%M"),tz="Etc/GMT+5")
+
+tides$Date[tides$Site=="Eel"] <- tides$Date[tides$Site=="Eel"]+ minutes(60) #Eel Pond tide is delayed by about half an hour consistantely compared to the local tide stations. 
+
+tides$state <- rep(NA, length.out = nrow(tides))
+# for(i in 2:nrow(tides)){
+#   if(tides$Tideheight[i]>tides$Tideheight[i-1]){ tides$state[i] <- "Ebb"} else {tides$state <- "Flood"}
+# }
+
+# tides$state <- ifelse(tides$Tideheight > dplyr::lag(tides$Tideheight, default = first(tides$Tideheight)), "Ebb", "Flood")
+
+library(dplyr)
+#https://www.statology.org/r-lag/
+
+
+# Now 'tide_group' column will contain a unique identifier for each pair of ebb and flood tide
+
+tides$previous_Tideheight <- lag(tides$Tideheight, n = 3)
+tides <- tides %>%
+  mutate(state = case_when(Tideheight > previous_Tideheight 
+                           | Tideheight > lag(previous_Tideheight, 
+                                              n = 3) ~ "Flood",
+                           Tideheight < previous_Tideheight 
+                           | Tideheight < lag(previous_Tideheight, 
+                                              n = 3) ~ "Ebb",
+                           TRUE ~ "Slack"),
+        tide_group = cumsum(state != lag(state, default = first(state))))
+tides$state[1:3] <- "Flood"
+
+
+data_combined$Date<-as.POSIXct(data_combined$Date, tz="Etc/GMT+5")
+data_combined$Date<-round_date(data_combined$Date, unit="minutes")
+
+data_combined$Site<-as.factor(data_combined$Site)
+data_combined$H_plus_conc<-10^(-data_combined$pH)
+
+joined_df <- left_join(x=data_combined, y=tides, by= c("Date","Site"))
+```
+
+```{r}
+# Plot tides --------------------------------------------------------------
+Ptown <- joined_df[joined_df$Site=="Ptown",]
+plot(Temp~Tideheight, pch =".",type ="l", data = Ptown, main="Ptown")
+plot(pH~Tideheight,pch=".",data = Ptown, type = "b", main="Ptown")
+lines(x=c(.4,.4),y=c(5,9),lwd=3)
+# This graph seems to demonstrate that pH goes up or down at low tide (I'm guessing night or day) 
+# but below a certain point goes to ~7.8 - I think this is when the pH probe is not 
+# in water anymore.
+
+Den <- joined_df[joined_df$Site=="Den",]
+plot(Temp~Tideheight, pch =".",type ="l", data = Den, main="Den")
+plot(Tideheight~Temp, pch =".",type ="l", data = Den, ylim = c(-2,2),main="Den")
+# What concerns me are the lines where temp rapidly increases at low tide. I expect some slow temp increase, but not rapid. 
+# I also wonder about introducing a lag of a few hours after the sensor has been out of the water. Not here, but in the future. 
+
+plot(pH~Tideheight,pch=".",data = Den, type = "l", main="Den")
+lines(x=c(.5,.5),y=c(5,9),lwd=3) 
+
+
+Eel <- joined_df[joined_df$Site=="Eel",]
+plot(Temp~Tideheight, pch =".",type ="l", data = Eel, main="Eel")
+plot(pH~Tideheight,pch=".",data = Eel, type = "l", main="Eel")
+lines(x=c(0,0),y=c(5,30),lwd=3) 
+plot(pH~Temp,  pch =".",type ="l", data = Eel, main="Eel")
+# Not clear from data what tide is too low. It might be more wind-dependent. 
+# At 0.5ft tide the cages are on sediment that is about 2.5 ft deep. 
+# The sensor is installed <0.5ft above the sediment. However there is likely a mismatch between tide data at this site and 
+# The actual water level - the site water level does not vary much.
+# Honestly, I don't see anything in this data linked with the tides to suggest that I'm getting bad data when the tides go out.
+# If anything, the highest temps occur when the low tides are really minimal.
+# The HOBO temp logger will probably help the most in figuring this out, 
+# it will help determine if there is some wind/tide-driven bad data or not due to sensor exposure. 
+
+```
+
+Exclude pH from times water below low tide mark.
+
+```{r}
+Ptown <- Ptown[Ptown$Tideheight>1,] #This was at 0.4
+Den <- Den[Den$Tideheight>3,] #This was at .5
+Eel <- Eel[Eel$Tideheight>1,] #This was at 0. 
+```
+
+```{r}
+# Aggregate data --------------------------------------------------------------
+
+Ptown.hr <- aggregate(Ptown[,c("pH","Temp","H_plus_conc")], 
+                         list(Date = cut(Ptown[,c("Date")], breaks="hour")), 
+                         mean, na.rm = TRUE)
+Den.hr <- aggregate(Den[,c("pH","Temp","H_plus_conc")], 
+                      list(Date = cut(Den[,c("Date")], breaks="hour")), 
+                      mean, na.rm = TRUE)
+Eel.hr <- aggregate(Eel[,c("pH","Temp","H_plus_conc")], 
+                      list(Date = cut(Eel[,c("Date")], breaks="hour")), 
+                      mean, na.rm = TRUE)
+
+all.data.hr <- data.frame(
+  rbind(Ptown.hr,Den.hr,Eel.hr),
+  Site = as.factor(c(rep("Ptown",times = nrow(Ptown.hr)),
+           rep("Den",times = nrow(Den.hr)),
+           rep("Eel",times = nrow(Eel.hr))))
+           )
+all.data.hr$Date<- as.POSIXct(all.data.hr$Date)
+
+# Calc true mean not arithmetic mean
+all.data.hr$pH <- -log10(all.data.hr$H_plus_conc) 
+
+all.data.hr.break <- all.data.hr[1:3,]
+all.data.hr.break$Date <- "2023-01-01 00:00:00"
+all.data.hr.break$pH <- NA
+all.data.hr.break$Temp <- NA
+all.data.hr.break$Site <- c("Ptown", "Eel", "Den")
+all.data.hr <- rbind(all.data.hr,all.data.hr.break)
+
+#head(all.data.hr)
+
+```
+
+```{r}
+Ptown.dy <- aggregate(Ptown[,c("pH","Temp","H_plus_conc")], 
+                         list(Date = cut(Ptown[,c("Date")], breaks="day")), 
+                         mean, na.rm = TRUE)
+Den.dy <- aggregate(Den[,c("pH","Temp","H_plus_conc")], 
+                      list(Date = cut(Den[,c("Date")], breaks="day")), 
+                      mean, na.rm = TRUE)
+Eel.dy <- aggregate(Eel[,c("pH","Temp","H_plus_conc")], 
+                      list(Date = cut(Eel[,c("Date")], breaks="day")), 
+                      mean, na.rm = TRUE)
+
+all.data.dy <- data.frame(
+  rbind(Ptown.dy,Den.dy,Eel.dy),
+  Site = as.factor(c(rep("Ptown",times = nrow(Ptown.dy)),
+           rep("Den",times = nrow(Den.dy)),
+           rep("Eel",times = nrow(Eel.dy))))
+           )
+all.data.dy$Date<- as.POSIXct(all.data.dy$Date)
+
+# Calc true mean not arithmetic mean
+all.data.dy$pH <- -log10(all.data.dy$H_plus_conc) 
+
+all.data.dy.break <- all.data.dy[1:3,]
+all.data.dy.break$Date <- "2023-01-01 00:00:00"
+all.data.dy.break$pH <- NA
+all.data.dy.break$Temp <- NA
+all.data.dy.break$Site <- c("Ptown", "Eel", "Den")
+all.data.dy <- rbind(all.data.dy,all.data.dy.break)
+
+#head(all.data.dy)
+```
+
+```{r}
+
+Ptown.wk <- aggregate(Ptown[,c("pH","Temp","H_plus_conc")], 
+                         list(Date = cut(Ptown[,c("Date")], breaks="week")), 
+                         mean, na.rm = TRUE)
+Den.wk <- aggregate(Den[,c("pH","Temp","H_plus_conc")], 
+                      list(Date = cut(Den[,c("Date")], breaks="week")), 
+                      mean, na.rm = TRUE)
+Eel.wk <- aggregate(Eel[,c("pH","Temp","H_plus_conc")], 
+                      list(Date = cut(Eel[,c("Date")], breaks="week")), 
+                      mean, na.rm = TRUE)
+
+all.data.wk <- data.frame(
+  rbind(Ptown.wk,Den.wk,Eel.wk),
+  Site = as.factor(c(rep("Ptown",times = nrow(Ptown.wk)),
+           rep("Den",times = nrow(Den.wk)),
+           rep("Eel",times = nrow(Eel.wk))))
+           )
+all.data.wk$Date<- as.POSIXct(all.data.wk$Date)
+
+# Calc true mean not arithmetic mean
+all.data.wk$pH <- -log10(all.data.wk$H_plus_conc) 
+
+#head(all.data.wk)
+
+all.data.wk.break <- all.data.wk[1:3,]
+all.data.wk.break$Date <- "2023-01-01 00:00:00"
+all.data.wk.break$pH <- NA
+all.data.wk.break$Temp <- NA
+all.data.wk.break$Site <- c("Ptown", "Eel", "Den")
+all.data.wk <- rbind(all.data.wk,all.data.wk.break)
+#tail(all.data.wk)
+
+
+```
+
+### Final plots
+
+```{r}
+# plot(all.data$Date, all.data$pH, 
+#      color = as.factor(data_combined$Site), pch = ".")
+
+sampling.pH <- data.frame(
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
+  y = c(7.5,7.5,7.5,7.5,7.5,7.5)
+)
+sampling.temp <- data.frame(
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
+  y = c(5,5,5,5,5,5)
+)
+
+theme_set(theme_bw())
+
+colors <- c(
+  "Den"="blue",
+  "Eel"="green",
+  "Ptown"="orange",
+  "Date sampled"="black"
+)
+
+#scale_color_manual(values=c("blue", "green", "orange"))
+
+# Now I'm aggregating by day... and this is a bit easier to digest when comparing among sites
+#head(all.data.wk)
+#str(all.data.wk)
+
+gg1 <- ggplot(all.data.wk, aes(x=Date, y=pH, colour = Site))+
+  geom_point(cex = 1) +
+  geom_line(cex = 1)+
+  ylim(7.5,8.3)+
+  #xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
+  geom_point(data = sampling.pH, aes(x,y), color = "black", cex = 5)+
+  scale_color_manual(values=colors) +
+  guides(colour = guide_legend(override.aes = list(size=5)))+
+  ggtitle('B. pH')
+
+
+ylab = expression("Temperature " ( degree*C))
+
+gg2 <- ggplot(all.data.wk, aes(x=Date, y=Temp, colour = Site))+
+  geom_point(cex = 1) +
+  geom_line(cex = 1)+
+  labs(y=ylab)+
+  #ylim(14,30)+
+  #xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
+  geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 5)+
+  scale_color_manual(values=colors) +
+  guides(colour = guide_legend(override.aes = list(size=5)))+
+  ggtitle('A. Temp')
+
+
+
+ggarrange(gg2, gg1, common.legend = TRUE, legend="bottom")
+
+#
+```
+
+```{r}
+setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/HOBOpHdata")
+write.csv(all.data.wk, file="Summary_weekly_ave.csv")
+write.csv(all.data.dy, file="Summary_daily_ave.csv")
+```
+
+## Carbonate chemistry data
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/"
+#carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.csv", sep = ""), stringsAsFactors = FALSE)
+carb_dat <- read.csv(paste(dir_data,"Surfclam_transplant_carbonate_data_flagged.xlsx - Transplant_site_data.csv", sep = ""), stringsAsFactors = FALSE)
+
+#str(carb_dat)
+carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%Y")
+carb_dat <- carb_dat[!is.na(carb_dat$Date),]
+carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
+carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
+carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
+carb_dat$Site[carb_dat$Site == "East Dennis"] <- "Den"
+
+carb_dat$Site <- as.factor(carb_dat$Site)
+carb_dat <- carb_dat[carb_dat$Stratum!= "2cm control",] #Only include animal cages
+
+#carb_dat$Stratum[carb_dat$Stratum== "2cm control"] <- "2cm" #Pooling all samples for now
+
+carb_dat$Stratum <- as.factor(carb_dat$Stratum)
+carb_dat$Shell.treatment[carb_dat$Shell.treatment=="shell"] <- "Shell"
+carb_dat$Shell.treatment[carb_dat$Shell.treatment=="No shell"] <- "No Shell"
+
+carb_dat$Shell.treatment <- as.factor(carb_dat$Shell.treatment)
+#unique(carb_dat$Shell.treatment)
+carb_dat$Site<- factor(carb_dat$Site,levels =c("Ptown","Eel","Den"))
+
+#str(carb_dat)
+
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+    breaks = c(0, 93, 187, 276, Inf), 
+    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+carb_dat$Arg.saturation <- carb_dat$Omega_Ar_final
+carb_dat.all <- carb_dat
+#carb_dat <- carb_dat[carb_dat$Calculation.method!="bad",]
+#carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
+
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+carb_dat$Water.Sediment..Temp <- carb_dat$Water.Sed..Temp
+
+
+# carb_dat$pH_all_points = carb_dat$pH..pH.DIC.
+# carb_dat$pH_all_points[!is.na(carb_dat$pH_total_scale_final)] = carb_dat$InSitu.pH[!is.na(carb_dat$pH_total_scale_final)]
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+
+# carb_dat$InSitu.pH <- carb_dat$pH_all_points
+
+
+```
+
+```{r}
+carb_dat <- carb_dat[!is.na(carb_dat$InSitu.pH),]
+
+sampling.pH <- data.frame(
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
+  y = rep(7.2, 6)
+)
+sampling.temp <- data.frame(
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
+  y = rep(0,6)
+)
+
+
+gg1 <- ggplot(all.data.dy, aes(x=Date, y=pH, colour = Site))+
+  geom_line(cex = 1)+
+  ylim(7.2,8.3)+
+  #xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
+  geom_point(data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+  scale_color_manual(values=colors) +
+  guides(colour = guide_legend(override.aes = list(size=5)))+
+  ggtitle('B. pH')+
+  geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = InSitu.pH, colour = Site),cex = 2, pch=22)
+
+
+gg1
+
+ylab = expression("Temperature " ( degree*C))
+
+gg2 <- ggplot(all.data.dy, aes(x=Date, y=Temp, colour = Site))+
+  geom_line(cex = 1)+
+  labs(y=ylab)+
+  ylim(0,30)+
+  #xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-09-9 00:00:00 EDT")))+
+  geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 1)+
+  scale_color_manual(values=colors) +
+  guides(colour = guide_legend(override.aes = list(size=5)))+
+  ggtitle('A. Temp')+
+  geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = Water.Sediment..Temp, colour = Site),cex = 2, pch = 22)
+gg2
+
+ggarrange(gg2, gg1, common.legend = TRUE, legend="bottom")
+
+```
+
+```{r}
+# I need to add all of the tide data so I can subset the data using tide data
+
+
+# Tide data websites:
+#https://tidesandcurrents.noaa.gov/map/index.html
+# Dennis https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=8447241&units=standard&bdate=20220901&edate=20220930&timezone=LST/LDT&clock=24hour&datum=MLLW&interval=1&action=dailychart
+# Falmouth - only L/H: https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=8447865
+# Hyannis - https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=8447605
+# Note I'm using the Hyannis dataset because they have down to 1min predictions. Falmouth does not.
+# Compared to Eel Pond Entrance on Willy Weather, Hyannis is ~30 min behind - which is perfect. The tide in Eel pond seems to be ~1/2 hour after 
+# Willy Weather says it is. 
+```
+
+## Read YSI data
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/"
+YSI <- read.csv(paste(data_dir,"YSI_Eel_Ptown.csv",sep = ""), stringsAsFactors = FALSE)
+
+YSI$datetime <- as.POSIXct(YSI$datetime)
+YSI$Hplus_P <- 10^-YSI$pH_P
+YSI$Hplus_E <- 10^-YSI$pH_E
+
+YSI.Ptown.dy <- aggregate(YSI[,c("Temp_P","pH_P","Sal_P","Hplus_P")], 
+                         by = list(Date = cut(YSI$datetime, breaks="day")), 
+                         FUN = mean, na.rm=TRUE)
+YSI.Eel.dy <- aggregate(YSI[,c("Temp_E","pH_E", "Sal_E","Hplus_E")], 
+                         by = list(Date = cut(YSI$datetime, breaks="day")), 
+                         FUN = mean, na.rm=TRUE)
+
+YSI.Eel.dy$Date <- as.POSIXct(as.character(YSI.Eel.dy$Date))
+YSI.Ptown.dy$Date <- as.POSIXct(as.character(YSI.Ptown.dy$Date))
+
+HOBOpH.Ptown.dy <- all.data.dy[all.data.dy$Site =="Ptown",]
+HOBOpH.Eel.dy <- all.data.dy[all.data.dy$Site =="Eel",]
+
+joined_Ptown <- merge(x=HOBOpH.Ptown.dy, y=YSI.Ptown.dy, by = "Date", all=T)
+joined_Eel <- merge(x=HOBOpH.Eel.dy, y=YSI.Eel.dy, by = "Date", all=T)
+```
+
+```{r}
+mod_Ptown_Hplus <- lm(data = joined_Ptown,H_plus_conc ~ Hplus_P * Temp_P * Sal_P)
+mod_Ptown_pH   <- lm(data = joined_Ptown,pH ~ pH_P * Temp_P * Sal_P)
+mod_Ptown_Temp <- lm(data = joined_Ptown,Temp ~ pH_P + Temp_P + Sal_P)
+mod_Ptown_Temp <- lm(data = joined_Ptown,Temp ~ Temp_P)
+summary(mod_Ptown_Hplus)
+summary(mod_Ptown_pH)
+summary(mod_Ptown_Temp)
+plot(data = joined_Ptown, H_plus_conc ~ Hplus_P)
+plot(data = joined_Ptown, pH ~ pH_P)
+plot(data = joined_Ptown, Temp ~ Temp_P)
+plot(data = joined_Ptown, pH_P ~ Temp_P)
+str(joined_Ptown)
+par(mfrow = c(1, 1))
+plot(data = joined_Ptown, pH_P ~ Date, ylim = c(7.4,8.6))
+points(data = joined_Ptown, pH ~ Date, col = "red")
+```
+
+```{r}
+mod_Eel_Hplus   <- lm(data = joined_Eel,H_plus_conc ~ Hplus_E * Temp_E * Sal_E)
+mod_Eel_pH   <- lm(data = joined_Eel,pH ~ pH_E * Temp_E * Sal_E)
+mod_Eel_Temp <- lm(data = joined_Eel,Temp ~ pH_E + Temp_E + Sal_E)
+mod_Eel_Temp <- lm(data = joined_Eel,Temp ~ Temp_E)
+summary(mod_Eel_Hplus) #R2 .67
+summary(mod_Eel_pH) #R2 .72
+summary(mod_Eel_Temp) #R2 .99
+plot(data = joined_Eel, log10(H_plus_conc) ~ log10(Hplus_E))
+plot(data = joined_Eel, pH ~ pH_E)
+plot(data = joined_Eel, Temp ~ Temp_E)
+
+```
+
+```{r}
+# joined_Eel$Temp.pred <- predict.lm(object = mod_Eel_Temp, newdata = joined_Eel, 
+#                                    na.action = na.pass)
+# joined_Ptown$Temp.pred <- predict.lm(object = mod_Ptown_Temp, newdata = joined_Ptown, na.action = na.pass)
+
+
+```
+
+```{r}
+sampling.pH <- data.frame(
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
+  y = c(7.5,7.5,7.5,7.5,7.5,7.5)
+)
+sampling.temp <- data.frame(
+  x = as.POSIXct(c("2022-06-29 00:00:00 EDT","2022-08-2 00:00:00 EDT","2022-09-9 00:00:00 EDT","2022-12-01 00:00:00 EDT","2023-04-01 00:00:00 EDT","2023-06-1 00:00:00 EDT")),
+  y = c(0,0,0,0,0,0)
+)
+
+theme_set(theme_bw())
+
+colors <- c(
+  "Den"="blue",
+  "Eel"="green",
+  "Ptown"="orange",
+  "Date sampled"="black"
+)
+
+#scale_color_manual(values=c("blue", "green", "orange"))
+
+# Now I'm aggregating by day... and this is a bit easier to digest when comparing among sites
+
+
+gg1 <- ggplot(all.data.dy, aes(x=Date, y=pH, colour = Site))+
+  geom_point(cex = 1) +
+  geom_line(cex = 1)+
+  ylim(7.5,8.3)+
+  xlim(as.POSIXct(c("2022-06-29 00:00:00 EDT","2023-06-10 00:00:00 EDT")))+
+  geom_point(data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+  #geom_point(data = joined_Ptown, aes(x=as.POSIXct(Date),y=pH_P), color = "orange", cex = .5)+
+  #geom_point(data = joined_Eel, aes(x=as.POSIXct(Date),y=pH_E), color = "green", cex = .5)+
+  scale_color_manual(values=colors) +
+  guides(colour = guide_legend(override.aes = list(size=5)))+
+    geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = InSitu.pH, colour = Site),cex = 2, pch=22)+
+  ggtitle('B. pH')
+gg1
+
+ylab = expression("Temperature " ( degree*C))
+
+all.data.dy <- all.data.dy[all.data.dy$Site != "Den",]
+all.data.dy$Site <- as.factor(all.data.dy$Site)
+all.data.dy$Site <- factor(all.data.dy$Site, levels=c ('Ptown', 'Eel', 'Den'))
+
+gg2 <- ggplot(all.data.dy, aes(x=Date, y=Temp, colour = Site))+
+  geom_point(cex = 1) +
+  geom_line(cex = 1)+
+  labs(y=ylab)+
+  #ylim(14,30)+
+  xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+    geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 1) +
+   geom_point(data = joined_Ptown, aes(x=as.POSIXct(as.character(Date)),y=Temp_P), color = "orange", cex = .5)+
+   geom_point(data = joined_Eel, aes(x=as.POSIXct(as.character(Date)),y=Temp_E), color = "green", cex = .5)+
+#   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = Water.Sediment..Temp, color = Site),cex = 2, pch = 22)#+
+   ggtitle('A. Temp')
+
+gg2
+
+ggarrange(gg2, gg1, common.legend = TRUE, legend="bottom", ncol = 2)
+
+
+
+```
+
+I think I'll go back to the original colors, but this points out the fact that SW temps usually but do not always match. I want to input the HOBO SW temp data and make sure that this matches with the HOBO temp. I want to check that spike in July in Ptown - is this real or not? I also want to check that the HOBO sensor pH readings are not influenced substantially by fouling. To do this I need to check the cleaning schedule. This also suggests that the Eel Pond pH's of 8.1 in December / Jan may not be correct. The daily averages are so stable this seems wrong. I already cut out bad data (pH 7.5) from the SONDE in Eel Pond so this makes me less confident in the dataset generally if there is no explanation.
+
+## Sediment temp loggers
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Sediment_temp_loggers/"
+Eel_sediment <- read.csv(paste(data_dir,"Eel_sediment_425 2023-06-12 13_45_19 EDT (Data EDT)(1).csv",sep=""), stringsAsFactors = FALSE)
+names(Eel_sediment) <- c("n","Date","Temp","Button.Down")
+str(Eel_sediment)
+Eel_sediment$Date <- as.POSIXct(Eel_sediment$Date, format = "%m/%d/%Y %H:%M:%S")
+gg3 <- gg2+
+  geom_point(data = Eel_sediment, aes(x=as.POSIXct(Date),y=Temp), color = "purple", cex = .5)
+gg3
+
+h <- Eel_sediment[Eel_sediment$Date> "2023-02-03"&Eel_sediment$Date< "2023-02-10",]
+plot(data = h,Temp~Date) #-10C is quite low. However, we went out on Feb 21st and late Jan as well. At this time we were not doing bimonthly sampling. So - this seems real, or at least not an artifact of deploying/retrieving. 
+
+```
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Sediment_temp_loggers/"
+Ptown_sediment <- read.csv(paste(data_dir,"Ptown_sediment_489 2023-07-19 10_48_26 EDT (Data EDT).csv",sep=""), stringsAsFactors = FALSE)
+names(Ptown_sediment) <- c("n","Date","Temp","Button.Down")
+str(Ptown_sediment)
+Ptown_sediment$Date <- as.POSIXct(Ptown_sediment$Date, format = "%m/%d/%Y %H:%M:%S")
+
+
+h <- head(Ptown_sediment,1000)
+plot(data = h,Temp~Date) #I'm confused because it looks like there are diurnal tidal cycles but 40C is too hot to be in the sediment. According to the sampling trip plan datasheets I should have deployed the sensor on 8/3 at 9AM when I was at the site in Ptown, but I did additional sensor work in Ptown on 8/4, so I could have deployed the sensor then.   
+Ptown_sediment <- Ptown_sediment[Ptown_sediment$Date > "2022-08-05",]
+
+gg3 <- gg2+
+  geom_point(data = Ptown_sediment, aes(x=Date,y=Temp), color = "purple", cex = .1)
+gg3
+```
+
+## Conductivity
+
+Eel Pond Fall
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Conductivity/"
+Eel_cond <- read.csv(paste(data_dir,"20674248_Eel_Sal.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+ names(Eel_cond) <- c("n","Date","Cond_High","Temp","Sp.Cond","Sal")
+#tail(Eel_cond,500)
+Eel_cond$Date <- as.POSIXct(strptime(Eel_cond$Date, 
+                                     format = "%m/%d/%y %I:%M:%S %p", tz = "EST"))
+# 
+# 
+ h <- head(Eel_cond,1000)
+ plot(data = h,Temp~Date)   
+ Eel_cond <- Eel_cond[Eel_cond$Date > "2022-09-29",]
+ 
+ t <- tail(Eel_cond,1000)
+ plot(data = t,Temp~Date)   
+ Eel_cond <- Eel_cond[Eel_cond$Date < "2022-12-05 12:00:00",]
+
+gg3 <- gg2+
+  geom_point(data = Eel_cond, aes(x=Date,y=Temp), color = "purple", cex = 1)
+gg3
+
+
+plot(Eel_cond$Date, Eel_cond$Cond_High, type = "l")
+
+plot(Eel_cond$Date, Eel_cond$Cond_High, type = "l", xlim = as.POSIXct(c("2022-11-01","2022-11-24")))
+```
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Conductivity/"
+Ptown_cond <- read.csv(paste(data_dir,"20674247_Ptown.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+names(Ptown_cond) <- c("n","Date","Cond_High","Temp","Other")
+str(Ptown_cond)
+Ptown_cond$Date <- as.POSIXct(Ptown_cond$Date, format = "%m/%d/%Y %H:%M")
+# 
+# 
+ h <- head(Ptown_cond,1000)
+ plot(data = h,Temp~Date)   
+ #Ptown_cond <- Ptown_cond[Ptown_cond$Date > "2022-09-29",]
+ 
+  t <- tail(Ptown_cond,1000)
+ plot(data = t,Temp~Date)   
+ Ptown_cond <- Ptown_cond[Ptown_cond$Date < "2022-09-27 17:00:00",]
+#
+str(Ptown_cond)
+
+Ptown.1 <- Ptown_cond[,c("Date","Cond_High","Temp")]
+
+gg3 <- gg2+
+  geom_point(data = Ptown_cond, aes(x=Date,y=Temp), color = "purple", cex = 1)
+gg3
+
+plot(Ptown_cond$Date, Ptown_cond$Cond_High, type = "l")
+```
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Conductivity/"
+Ptown_cond <- read.csv(paste(data_dir,"21446049_Ptown_Dec22.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+names(Ptown_cond) <- c("n","Date","Cond_Low","Cond_High","Temp","Other")
+str(Ptown_cond)
+Ptown_cond$Date <- as.POSIXct(Ptown_cond$Date, format = "%m/%d/%Y %H:%M")
+# 
+# 
+ h <- head(Ptown_cond,1000)
+ plot(data = h,Temp~Date)   
+ Ptown_cond <- Ptown_cond[Ptown_cond$Date > "2022-09-27 20:00:00",]
+
+ 
+  t <- tail(Ptown_cond,1000)
+ plot(data = t,Temp~Date)  
+Ptown_cond <- Ptown_cond[Ptown_cond$Date < "2022-12-04 13:00:00",]
+
+#
+str(Ptown_cond)
+
+Ptown.2 <- Ptown_cond[,c("Date","Cond_High","Temp")]
+
+
+gg3 <- gg2+
+  geom_point(data = Ptown_cond, aes(x=Date,y=Temp), color = "purple", cex = 1)
+gg3
+
+
+plot(Ptown_cond$Date, Ptown_cond$Cond_High, type = "l")
+```
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Conductivity/"
+Ptown_cond <- read.csv(paste(data_dir,"21446049_Ptown_Jul23.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+names(Ptown_cond) <- c("n","Date","Cond_Low","Cond_High","Temp","Other")
+str(Ptown_cond)
+Ptown_cond$Date <- as.POSIXct(Ptown_cond$Date, format = "%m/%d/%Y %H:%M")
+# 
+# 
+ h <- head(Ptown_cond,1000)
+ plot(data = h,Temp~Date)   
+ Ptown_cond <- Ptown_cond[Ptown_cond$Date > "2023-04-17 15:00:00",]
+
+ 
+  t <- tail(Ptown_cond,1000)
+ plot(data = t,Temp~Date)  
+Ptown_cond <- Ptown_cond[Ptown_cond$Date < "2023-07-19 12:00:00",]
+
+#
+str(Ptown_cond)
+
+Ptown.3 <- Ptown_cond[,c("Date","Cond_High","Temp")]
+
+Ptown_cond <- rbind(Ptown.1, Ptown.2, Ptown.3)
+
+gg3 <- gg2+
+  geom_point(data = Ptown_cond, aes(x=Date,y=Temp), color = "purple", cex = 1)
+gg3
+
+
+plot(Ptown_cond$Date, Ptown_cond$Cond_High, type = "l")
+```
+
+SW temperature
+
+```{r}
+data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/SW temp HOBO/"
+Den_cond <- read.csv(paste(data_dir,"10709184_East_Dennis.csv",sep=""), skip = 2, stringsAsFactors = FALSE)
+names(Den_cond) <- c("n","Date","Temp","Other")
+str(Den_cond)
+Den_cond$Date <- as.POSIXct(Den_cond$Date, format = "%m/%d/%Y %H:%M")
+# 
+# 
+ h <- head(Den_cond,1000)
+ plot(data = h,Temp~Date)   
+ Den_cond <- Den_cond[Den_cond$Date > "2022-06-17 12:00:00",]
+
+ 
+  t <- tail(Den_cond,1000)
+ plot(data = t,Temp~Date)  
+ Den_cond <- Den_cond[Den_cond$Date < "2023-09-12",]
+
+#
+str(Den_cond)
+
+
+gg3 <- gg2+
+  geom_point(data = Den_cond, aes(x=Date,y=Temp), color = "purple", cex = 1)
+gg3
+
+
+
+```
+
+## Flood and ebb tide analysis
+
+Issues: The tide groups aren't right. They jump around. Also not all the sediment temps get assigned a tide group because I need to assign everything to the same timeseries (0,15,30,45) etc.
+
+```{r}
+#| column: screen
+#| out-width: 100%
+#| fig-format: svg
+library(zoo)
+library(lubridate)
+
+Ptown_sediment <- Ptown_sediment[,c("Date","Temp")]
+
+# to.minutes15(Ptown)[,4] # interpolate for each 15 min interval
+# format(round_date(as.POSIXct(paste("1900-01-01 ", x)), unit="15 mins"), "%M")
+#str(Ptown)
+Ptown$Date <- round_date(Ptown$Date, unit="15 mins")
+#tail(Eel$Date)
+Ptown.sed <- merge(Ptown, Ptown_sediment, by = "Date", 
+                   #all = TRUE , 
+                   suffixes = c("",".sediment"))
+Ptown.sed$season <- cut(lubridate::yday(Ptown.sed$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+Ptown.sed <- Ptown.sed[!is.na(Ptown.sed$season),]
+Ptown.sed <- Ptown.sed[Ptown.sed$season!="Winter",]
+
+head(Ptown_sediment$Date) #The sediment logger is on the 15 minute interval. 
+
+
+Eel_sediment <- Eel_sediment[,c("Date","Temp")]
+Eel$Date <- round_date(Eel$Date, unit="15 mins")
+Eel.sed <- merge(Eel, Eel_sediment, by = "Date", 
+                 #all.x = TRUE , 
+                 suffixes = c("",".sediment"))
+Eel.sed$season <- cut(lubridate::yday(Eel.sed$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+Eel.sed$diel <- cut(lubridate::hour(Eel.sed$Date - lubridate::hour(6)), 
+     breaks = c(0, 12, Inf), 
+     labels = c("Day", "Night"))
+
+
+```
+
+```{r}
+library(lemon)
+
+lim.P <- as.POSIXct(c(min(Eel.sed$Date),max(Ptown.sed$Date)))
+lim.E <- as.POSIXct(c(min(Eel.sed$Date),max(Ptown.sed$Date)))
+carb_dat <- carb_dat[carb_dat$Date>min(Eel.sed$Date) & carb_dat$Date<max(Ptown.sed$Date),]
+
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+carb_dat$season <- factor(carb_dat$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+Ptown.sed$season <- factor(Ptown.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+Eel.sed$season <- factor(Eel.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+
+
+```
+
+### Break carb dat dataset into two groups
+
+### & save workspace
+
+```{r}
+carb_dat.P <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Ptown",]
+carb_dat.E <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Eel",]
+
+save.image(file=paste(Sys.Date(),'pH.output.RData',sep = ""))
+```
+
+```{r fig.height=10, fig.width=12}
+ggplot(Ptown.sed, aes(y = pH, x = Date))+
+  geom_line(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~season, scales="free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+
+ggplot(Eel.sed, aes(y = pH, x = Date))+
+  geom_line(aes(group = tide_group, color = state))+
+  ggtitle("Eel Pond")+
+  facet_wrap(vars(season), scales = "free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.E, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+
+ggplot(Ptown.sed, aes(y = Temp, x = Date))+
+  geom_line(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~season, scales="free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+
+ggplot(Eel.sed, aes(y = Temp, x = Date))+
+  geom_line(aes(group = tide_group, color = state))+
+  ggtitle("Eel Pond")+
+  facet_wrap(vars(season), scales = "free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.E, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+
+```
+
+```{r fig.height=20, fig.width=20}
+library(lubridate)
+
+ggplot(Ptown.sed, aes(y = pH, x = Date))+
+  geom_line(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 3)+
+  facet_rep_wrap(~month(Date),scales = "free", ncol = 3)+
+  ylim(7.2,8.4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+
+ggplot(Eel.sed, aes(y = pH, x = Date))+
+  geom_line(aes(group = tide_group, color = state))+
+  ggtitle("Eel Pond")+
+  facet_rep_wrap(~month(Date),scales = "free", ncol = 3)+
+  ylim(7.2,8.4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.E, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+
+ggplot(Ptown.sed, aes(y = Temp, x = Date))+
+  geom_line(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  facet_rep_wrap(~month(Date),scales = "free", ncol = 3)+
+  #ylim(7.2,8.4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+
+ggplot(Eel.sed, aes(y = Temp, x = Date))+
+  geom_line(aes(group = tide_group, color = state))+
+  ggtitle("Eel Pond")+
+  facet_rep_wrap(~month(Date),scales = "free", ncol = 3)+
+  #ylim(7.2,8.4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.E, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+```
+
+```{r}
+ggplot(Ptown.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  facet_wrap(~season)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  ggtitle("Provincetown")
+
+ggplot(Ptown.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~season)+  ggtitle("Provincetown")
+
+ggplot(Ptown.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~month(Date))+  ggtitle("Provincetown")
+
+Eel.sed$temp.diff <- Eel.sed$Temp-Eel.sed$Temp.sediment
+ggplot(Eel.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~season)+  ggtitle("Eel Pond")
+
+ggplot(Eel.sed, aes(y = pH, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~season) +  ggtitle("Eel Pond")
+
+
+
+```
+
+```{r}
+Ptown.sed$Hour <- hour(Ptown.sed$Date)
+Ptown.sed$daynight <- ifelse( Ptown.sed$Hour<7 | 19<Ptown.sed$Hour, "Night","Day" )
+
+ggplot(Ptown.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  xlim(0,12)+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~daynight+season)+
+  ggtitle("Provincetown")
+
+ggplot(Ptown.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  xlim(0,12)+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~daynight+month(Date))+
+  ggtitle("Provincetown")
+
+
+Eel.sed$Hour <- hour(Eel.sed$Date)
+Eel.sed$daynight <- ifelse( Eel.sed$Hour<7 | 19<Eel.sed$Hour, "Night","Day" )
+Eel.sed$dayvec <- 
+
+Eel.sed$temp.diff <- Eel.sed$Temp-Eel.sed$Temp.sediment
+ggplot(Eel.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  xlim(0,5)+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+Eel.sed$temp.diff <- Eel.sed$Temp-Eel.sed$Temp.sediment
+ggplot(Eel.sed, aes(y = Temp-Temp.sediment, x = Tideheight, group = tide_group, color = state))+
+  geom_line()+
+  xlim(0,5)+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  facet_wrap(~daynight+month(Date))+
+  ggtitle("Eel Pond")
+
+
+Eel.sed[Eel.sed$temp.diff>2,]
+
+
+ggplot(Eel.sed, aes(x = Date , y = temp.diff, color = state))+
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2022-11-10","2022-11-25")))+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+ggplot(Eel.sed, aes(x = Date , y = Temp, color = state))+
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2022-11-19","2022-11-22")))+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+ggplot(Eel.sed, aes(x = Date , y = Temp.sediment, color = state))+
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2022-11-19","2022-11-22")))+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+# 
+# Eel.sed.date <- Eel.sed %>%
+#   mutate(Date.Time = ymd_hms(Date)) %>%
+#   mutate(Date = as.Date(Date.Time)) %>%
+#   group_by(Date) %>%
+#   filter(Date.Time == min(Date.Time)) %>%
+#   ungroup() #%>%
+#   #select(-Date)
+
+ggplot(Eel.sed, aes(x = Date , y = pH, color = state))+
+  #geom_rect(aes(xmin = Date, xmax = dplyr::lead(Date), ymin = -Inf, ymax = Inf,
+  #              fill = as.factor(daynight), alpha = .1)) +
+  #geom_vline(Eel.sed.date, xintercept=Date,
+  #     linetype=4, colour="black")
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2022-11-19","2022-11-30")))+
+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+
+ggplot(Eel.sed, aes(x = Date , y = Temp - Temp.sediment, color = state))+
+  #geom_rect(aes(xmin = Date, xmax = dplyr::lead(Date), ymin = -Inf, ymax = Inf,
+  #              fill = as.factor(daynight), alpha = .1)) +
+  #geom_vline(Eel.sed.date, xintercept=Date,
+  #     linetype=4, colour="black")
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2023-05-05","2023-05-10")))+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+ggplot(Eel.sed, aes(x = Date , y = Temp, color = state))+
+  #geom_rect(aes(xmin = Date, xmax = dplyr::lead(Date), ymin = -Inf, ymax = Inf,
+  #              fill = as.factor(daynight), alpha = .1)) +
+  #geom_vline(Eel.sed.date, xintercept=Date,
+  #     linetype=4, colour="black")
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2023-05-05","2023-05-10")))+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+ggplot(Eel.sed, aes(x = Date , y = Temp.sediment, color = state))+
+  #geom_rect(aes(xmin = Date, xmax = dplyr::lead(Date), ymin = -Inf, ymax = Inf,
+  #              fill = as.factor(daynight), alpha = .1)) +
+  #geom_vline(Eel.sed.date, xintercept=Date,
+  #     linetype=4, colour="black")
+  geom_point()+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  scale_x_datetime(limits = as.POSIXct(c("2023-05-05","2023-05-10")))+
+  #facet_wrap(~daynight+season)+
+  ggtitle("Eel Pond")
+
+
+
+
+
+#Must have checked the tris offset on Nov 21, eventhough I don't have a good record of being out there that day. 
+
+
+Eel.sed$Date[Eel.sed$Hour==0]
+
+Eel.sed[as.numeric(Eel.sed$Hour)==0, ]
+```
+
+```{r}
+# result.P <- Ptown.sed %>%
+#   group_by(tide_group) %>%
+#   reframe(#initial_flood = first(Tideheight[state == "Flood"]),
+#             #final_ebb = last(Tideheight[state == "Ebb"]),
+#             final_ebb_pH = pH[which(Tideheight == 
+#                                     last(Tideheight[state == "Ebb"]))],
+#             initial_flood_pH = pH[which(Tideheight == 
+#                                     first(Tideheight[state == "Flood"]))],
+#             sediment_temp = mean(Temp.sediment, na.rm = TRUE),
+#             #difference = last(Tideheight[state == "Ebb"]) - first(Tideheight[state == "Flood"])
+#             )
+# 
+# result.E <- Eel.sed %>%
+#   group_by(tide_group) %>%
+#   reframe(#initial_flood = first(Tideheight[state == "Flood"]),
+#             #final_ebb = last(Tideheight[state == "Ebb"]),
+#             final_ebb_pH = pH[which(Tideheight ==
+#                                     last(Tideheight[state == "Ebb"]))],
+#             initial_flood_pH = pH[which(Tideheight ==
+#                                     first(Tideheight[state == "Flood"]))],
+#             sediment_temp = mean(Temp.sediment, na.rm = TRUE),
+#             difference = last(Tideheight[state == "Ebb"]) - first(Tideheight[state == "Flood"])
+#              )
+# # 
+# 
+# ggplot(result, aes(y =  final_ebb_pH, x = initial_flood_pH))+
+#   geom_point()+
+#   ylim(7.5,8.5)+
+#   xlim(7.5,8.5)
+# 
+# 
+# result$change <- result$initial_flood_pH-result$final_ebb_pH
+# ggplot(result, aes(y =  change, x = sediment_temp))+
+#   geom_point()
+# #+
+#  # ylim(7.5,8.5)+
+#   #xlim(7.5,8.5)
+```
+
+## Output daily environmental data for DEB model
+
+I just want a general sense of pCO2 at the two sites to use in the model.
+
+```{r}
+unique(carb_dat.P$Shell.treatment)
+
+subset <- carb_dat.E[carb_dat.E$Shell.treatment=="outside cage"|carb_dat.E$Shell.treatment=="monitoring",]
+subset <- subset[subset$Stratum=="Bottom water",]
+
+pCO2.approx.E <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+subset <- carb_dat.P[carb_dat.P$Shell.treatment=="outside cage"|carb_dat.P$Shell.treatment=="monitoring",]
+subset <- subset[subset$Stratum=="Bottom water",]
+
+pCO2.approx.P <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+tail(pCO2.approx.P$x)
+
+plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
+points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
+write.csv(pCO2.approx.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.P.csv")
+write.csv(pCO2.approx.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.E.csv")
+```
+
+Temp output - use sediment temp
+
+This can be used for the second experiment. The first summer experiment doesn't have temp loggers in the sediment
+
+```{r}
+
+Eel_sediment$Date <- as.Date(Eel_sediment$Date)
+Ptown_sediment$Date <- as.Date(Ptown_sediment$Date)
+
+
+Temp.day.sed.E <- aggregate(Eel_sediment[,c("Temp")], 
+                         list(Date = cut(Eel_sediment[,c("Date")], 
+                                         breaks="day")), 
+                         mean, na.rm = TRUE)
+
+Temp.day.sed.P <- aggregate(Ptown_sediment[,c("Temp")], 
+                         list(Date = cut(Ptown_sediment[,c("Date")], 
+                                         breaks="day")), 
+                         mean, na.rm = TRUE)
+
+plot(as.Date(Temp.day.sed.P$Date),Temp.day.sed.P$x, col = "orange")
+points(as.Date(Temp.day.sed.E$Date),Temp.day.sed.E$x, col = "green")
+
+write.csv(Temp.day.sed.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.P.csv")
+write.csv(Temp.day.sed.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.E.csv")
+
+```
+
+Now recalculate from pH measurements from within the cages.
+
+```{r}
+library(dplyr)
+
+#unique(carb_dat.P$)
+
+subset <- carb_dat.E[carb_dat.E$Shell.treatment=="No Shell"|carb_dat.E$Shell.treatment=="Shell",]
+subset <- subset[subset$Stratum=="Bottom water",]
+subset <- subset %>% 
+      group_by(Date) %>% 
+      summarize(pCO2..pH.Alk. = mean(pCO2..pH.Alk., na.rm = TRUE)) 
+
+pCO2.approx.E <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+subset <- carb_dat.P[carb_dat.P$Shell.treatment=="No Shell"|carb_dat.P$Shell.treatment=="Shell",]
+subset <- subset[subset$Stratum=="Bottom water",]
+subset <- subset %>% 
+      group_by(Date) %>% 
+      summarize(pCO2..pH.Alk. = mean(pCO2..pH.Alk., na.rm = TRUE)) 
+
+pCO2.approx.P <- approx(as.Date(subset$Date), subset$pCO2..pH.Alk., xout=seq(min(as.Date(subset$Date), na.rm = TRUE), max(as.Date(subset$Date), na.rm = TRUE), "days"))
+
+#tail(pCO2.approx.P$x)
+
+plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
+points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
+write.csv(pCO2.approx.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.P.csv")
+write.csv(pCO2.approx.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.E.csv")
+```
+
+```{r}
+
+plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
+points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
+pCO2.approx.E <- as.data.frame(pCO2.approx.E)
+pCO2.approx.P <- as.data.frame(pCO2.approx.P)
+pCO2.approx.E$Site <- rep("Eel", times = nrow(pCO2.approx.E))
+pCO2.approx.P$Site <- rep("Prov", times = nrow(pCO2.approx.P))
+
+pCO2.all <- rbind(pCO2.approx.E, pCO2.approx.P)
+pCO2.all$Site <- as.factor(pCO2.all$Site)
+
+p <- ggplot(pCO2.all, aes(x=as.Date(x), y=y, group = Site, colour = Site)) +
+  geom_line() + 
+  xlab("")+
+  ylab("pCO2")#+
+  #xlim(as.Date(c("2022-08-01","2023-06-15")))
+p
+```

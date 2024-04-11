@@ -76,7 +76,7 @@ growth[growth$CI > 20,] #One bad data point. Dissection data must be in the wron
 #growth <- growth[!is.na(growth$L_mm),]
 #growth <- growth[growth$AliveOrDead=="L",]
 
-growth$len_tot <- growth$Len-growth$Start_len_mm
+growth$len_tot <- growth$Len-growth$Start_len_mm #len_tot is growth not final length. 
 growth$len_per_day <- growth$len_tot/growth$Elapsed_days
 
 growth$height_tot <- growth$Height-growth$Start_height_mm
@@ -154,13 +154,13 @@ growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel Pond"))
 levels(growth$Collection.month) <- c("Dec", "Apr", "Jun")
 levels(growth$Treatment) <- c("Control","Shell addition")
 
-gg0 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=len_tot, color = Treatment))+
+gg0 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Len, color = Treatment))+
   geom_boxplot()+
   xlab("Month") + 
-  ylab("Length")+
-  ylim(0,50)+
+  ylab("Length (mm)")+
+  ylim(0,55)+
   scale_color_discrete(name="Treatment")+
-  ggtitle ('Length')+
+  ggtitle ('A. Length')+
   facet_wrap(facets = "Site")
 gg0
 
@@ -168,33 +168,124 @@ gg1 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=len_tot/(Elaps
   geom_boxplot()+
   xlab("Month") + 
   ylab("Growth per month (mm/month)")+
-  ylim(0,9)+
+  ylim(0,6)+
   scale_color_discrete(name="Treatment")+
-  ggtitle ('Growth')+
+  ggtitle ('B. Growth')+
   facet_wrap(facets = "Site")
 gg1
 
 
-gg2 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=(Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues.)/(Elapsed_days/30), color = Treatment))+
+gg2 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=(Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues.), color = Treatment))+
   geom_boxplot()+
   xlab("Month") + 
-  ylab("Growth per month (AFDW mg/month)")+
-  ylim(0,.25)+
+  ylab("Tissue weight (AFDW, g)")+
+ # ylim(0,.25)+
   scale_color_discrete(name="Treatment")+
-  ggtitle ('Tissue weight')+
+  ggtitle ('C. Tissue weight')+
   facet_wrap(facets = "Site")
 
 gg2
 
-
+CI_label <-  expression(paste("Condition index (mg / ","cm"^3,")", sep = ""))
 gg3 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=CI, color = Treatment))+
   geom_boxplot()+
   xlab("Month") + 
-  ylab("Condition index (mg / cm^3)")+
+  ylab(CI_label)+
   ylim(0,18)+
   scale_color_discrete(name="Treatment")+
-  ggtitle ('Condition index')+
+  ggtitle ('D. Condition index')+
   facet_wrap(facets = "Site")
+
+gg3
+
+ggarrange(gg0,gg1,gg2,gg3, ncol=2, common.legend = TRUE, legend = "right")
+
+
+
+```
+
+```{r}
+gg4 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Height/Len, color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Height:Length allometric ratio")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Allometry')+
+  facet_wrap(facets = "Site")
+
+gg4
+
+gg5 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues./DW, color = Treatment))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("AFDW / DW")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Check')+
+  facet_wrap(facets = "Site")
+
+gg5
+
+
+
+ggarrange(gg0,gg1,gg3, ncol=3, common.legend = TRUE, legend = "right")
+
+ggarrange(gg1,gg3, ncol=2, common.legend = TRUE, legend = "right")
+```
+
+```{r}
+growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel Pond"))
+levels(growth$Site)[levels(growth$Site)=="Ptown"] <- "Provincetown"
+levels(growth$Collection.month) <- c("Dec", "Apr", "Jun")
+levels(growth$Treatment) <- c("Control","Shell addition")
+```
+
+```{r}
+gg0 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Len, color = Site))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Length (mm)")+
+  ylim(0,60)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Length')#+
+  #facet_wrap(facets = "Site")
+gg0
+
+gg1 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=len_tot/(Elapsed_days/30), color = Site))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Growth per month (mm / month)")+
+  ylim(0,9)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Growth')#+
+  #facet_wrap(facets = "Site")
+gg1
+
+
+gg2 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=(Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues.)/(Elapsed_days/30), color = Site))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Growth per month (AFDW mg / month)")+
+  ylim(0,.25)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Tissue weight')#+
+  #facet_wrap(facets = "Site")
+
+gg2
+
+CI_label <-  expression(paste("Condition index( g ","mm"^-3,10^-6,")", sep = ""))
+CI_label <-  expression(paste("Condition index (mg / ","cm"^3,")", sep = ""))
+
+gg3 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=CI, color = Site))+
+  geom_boxplot()+
+  xlab("Month") + 
+  #ylab("Condition index (mg / cm^3)")+
+  ylab(CI_label)+
+  ylim(0,18)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('Condition index')#+
+  #facet_wrap(facets = "Site")
 
 gg3
 
@@ -223,8 +314,6 @@ gg5
 ggarrange(gg0,gg1,gg3, ncol=3, common.legend = TRUE, legend = "right")
 
 ggarrange(gg1,gg3, ncol=2, common.legend = TRUE, legend = "right")
-
-
 ```
 
 ## Initial and final lengths and weights for DEB model
@@ -249,8 +338,6 @@ gg2 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=len_tot, color
   ggtitle ('Growth')+
   facet_wrap(facets = "Site")
 gg2
-
-
 
 
 growth$row <- as.factor(substr(growth$Location_code,1,1))
@@ -286,6 +373,17 @@ gg5 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Start_len_mm, 
   facet_wrap(facets = "Site")
 gg5
 
+
+gg5 <- ggplot(data = growth, aes(x=Start_len_mm, y=len_tot, color = as.factor(Collection.month)))+
+  geom_point()+
+  xlab("Month") + 
+  ylab("Length (mm)")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Collection.month")+
+  ggtitle ('Growth')+
+  facet_wrap(facets = "Site")
+gg5
+
 #So for each cage we want Site, month collected, start date, end date, mean start length, final length
 
 str(growth)
@@ -294,18 +392,22 @@ growth$Start_date <- as.Date(strptime(growth$Start_date, format = "%m/%d/%Y"))
 
 df_summary <- growth %>% 
   group_by(Collection.month,as.factor(Location_code),Site) %>% 
+  filter(AliveOrDead=="Alive") %>% 
+  filter(Start_len_mm<=13&Start_len_mm>=10) %>% 
   summarise(
             Li = round(mean(Start_len_mm, na.rm = TRUE),1),
           
             
-            Lf = round(mean(len_tot, na.rm = TRUE),1),
+            Lf = round(mean(Len, na.rm = TRUE),1),
             
             
             Elapsed_days = round(mean(Elapsed_days, na.rm = TRUE),0),
             
             Start_date = unique(Start_date, na.rm = TRUE),
 
-            End_date = unique(Collection1_date, na.rm = TRUE)
+            End_date = unique(Collection1_date, na.rm = TRUE),
+            
+            Ave_growth = round(mean(Len-Start_len_mm, na.rm = TRUE),1)
   
             
             )
@@ -319,6 +421,27 @@ df_summary <- growth %>%
 
 #OK a little less weird... final lengths are just set to the same as initial lengths if there was no positive growth. 
 df_summary$Lf[(df_summary$Lf-df_summary$Li)<0]<- df_summary$Li[(df_summary$Lf-df_summary$Li)<0]
+
+gg5 <- ggplot(data = df_summary, aes(x=Li, y=Lf, color = as.factor(Elapsed_days)))+
+  geom_point()+
+  xlab("Length initial (mm)") + 
+  ylab("Length final (mm)")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Collection.month")+
+  ggtitle ('Initial and final averages')+
+  facet_wrap(facets = "Site")
+gg5
+
+gg5 <- ggplot(data = df_summary, aes(x=Li, y=Ave_growth, color = as.factor(Elapsed_days)))+
+  geom_point()+
+  xlab("Length initial (mm)") + 
+  ylab("Growth (mm)")+
+  #ylim(0,9)+
+  scale_color_discrete(name="Collection.month")+
+  ggtitle ('Initial and final averages')+
+  facet_wrap(facets = "Site")
+gg5
+
 
 write.csv(df_summary,file="~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/Growth.est.len.csv")
 

@@ -1,0 +1,38 @@
+---
+title: "DEB.model.graphs"
+format: html
+editor: visual
+date: "2024-03-08"
+author: "Emily Roberts"
+subtitle: "Growth predictions from environmental conditions"
+abstract: |
+"1.1.5) My goals are to: 1) add in the rest of Expt 2 data to the optimization, and 2) check out if we get the same story by using the in-situ pH loggers and salinity to estimate alkalinity and pCO2. 1.1.4) I am adding a MLE to estimate Xk. I'm not putting the model initialization for each initial length into the optimization function so that it can initialize correctly for all lengths and estimate multiple final lengths and optimize from all lengths. Now will do sensitivity to pCO2 enrichment. Back to June sampling timepoint."
+
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

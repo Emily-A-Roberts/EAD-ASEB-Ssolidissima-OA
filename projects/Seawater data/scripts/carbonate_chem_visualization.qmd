@@ -9,34 +9,70 @@ editor: visual
 ```{r}
 library(ggplot2)
 library(ggpubr)
+library(dplyr)
+
 ```
 
 (This is also in HOBO_pH_plots1.1.qmd)
 
+Looking at all data including bad and questionable data: (ER 4/2/24)
+
 ```{r}
 dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/"
-carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.csv", sep = ""), stringsAsFactors = FALSE)
+#carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.csv", sep = ""), stringsAsFactors = FALSE)
 
-carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_corrected.csv", sep = ""), stringsAsFactors = FALSE)
-str(carb_dat)
-carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%y")
+#carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_corrected.csv", sep = ""), stringsAsFactors = FALSE)
+
+carb_dat <- read.csv(paste(dir_data,"Surfclam_transplant_carbonate_data_flagged.xlsx - Transplant_site_data.csv", sep = ""), stringsAsFactors = FALSE)
+
+#str(carb_dat)
+carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%Y")
 carb_dat <- carb_dat[!is.na(carb_dat$Date),]
 carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
 carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
 carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
+carb_dat$Site[carb_dat$Site == "East Dennis"] <- "Den"
+
 carb_dat$Site <- as.factor(carb_dat$Site)
-carb_dat$Stratum[carb_dat$Stratum== "2cm control"] <- "2cm" #Pooling all samples for now
+carb_dat <- carb_dat[carb_dat$Stratum!= "2cm control",] #Only include animal cages
+
+#carb_dat$Stratum[carb_dat$Stratum== "2cm control"] <- "2cm" #Pooling all samples for now
+
 carb_dat$Stratum <- as.factor(carb_dat$Stratum)
 carb_dat$Shell.treatment[carb_dat$Shell.treatment=="shell"] <- "Shell"
+carb_dat$Shell.treatment[carb_dat$Shell.treatment=="No shell"] <- "No Shell"
+
 carb_dat$Shell.treatment <- as.factor(carb_dat$Shell.treatment)
-unique(carb_dat$Shell.treatment)
+#unique(carb_dat$Shell.treatment)
 carb_dat$Site<- factor(carb_dat$Site,levels =c("Ptown","Eel","Den"))
+
+#str(carb_dat)
+
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+    breaks = c(0, 93, 187, 276, Inf), 
+    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+
 ```
 
 ```{r}
-carb_dat <- carb_dat[carb_dat$Bad.data!="y",]
-carb_dat$InSitu.pH <- carb_dat$pH..pH.Alk.
-carb_dat$Arg.saturation <- carb_dat$Omega_Ar..pH.Alk.
+
+# carb_dat$pH_all_points <- carb_dat$pH..pH.DIC.
+# carb_dat$pH_all_points[!is.na(carb_dat$pH_total_scale_final)] <- carb_dat$pH_total_scale_final[!is.na(carb_dat$pH_total_scale_final)]
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+
+#carb_dat$InSitu.pH <- carb_dat$pH_all_points
+
+
+carb_dat$Arg.saturation <- carb_dat$Omega_Ar_final
+carb_dat <- carb_dat[carb_dat$Calculation.method!="bad",]
+carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
+
+
+carb_dat <- carb_dat[!is.na(carb_dat$InSitu.pH),]
+
+carb_dat.all <- carb_dat
 ```
 
 Plot carbonate chem data
@@ -144,8 +180,8 @@ theme_classic()+
    facet_wrap(~ Site)
  gg2
  
- carb_dat$pCO2..pH.Alk.
-    gg2 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=pCO2..pH.Alk., colour = Site))+
+ carb_dat$pCO2_final
+    gg2 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=pCO2_final, colour = Site))+
    geom_line(aes(), cex = 1, linetype=3,)+
    #ylim(0,4)+
    xlim(as.POSIXct(c("2022-08-20 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
@@ -153,17 +189,17 @@ theme_classic()+
       geom_line(
         data = carb_dat[carb_dat$Stratum=="2cm"&
                           carb_dat$Shell.treatment=="No Shell",],
-              aes(x=Date, y = pCO2..pH.Alk., colour = Site),
+              aes(x=Date, y = pCO2_final, colour = Site),
              linetype=1, cex = 1.5, pch=19)+ #shell is solid line
    geom_point(
      data = carb_dat[carb_dat$Stratum=="Bottom water"&
                        carb_dat$Shell.treatment=="Shell",],
-              aes(x=Date, y = pCO2..pH.Alk., colour = Site),
+              aes(x=Date, y = pCO2_final, colour = Site),
               cex = 2, pch=22)+
    geom_point(
      data = carb_dat[carb_dat$Stratum=="Bottom water"&
                        carb_dat$Shell.treatment=="No Shell",],
-              aes(x=Date, y = pCO2..pH.Alk., colour = Site),
+              aes(x=Date, y = pCO2_final, colour = Site),
               cex = 2, pch=19)+ #Shell is filled in circle
       #geom_point(
           #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
@@ -193,35 +229,6 @@ theme_classic()+
 ```
 
 ```{r}
-#Plot just no shell
- gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="No Shell",], aes(x=Date, y=InSitu.pH, colour = Site))+
-   geom_line(aes(), cex = 1, linetype=3,)+
-   ylim(7.2,8.3)+
-   xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
-theme_classic()+
-      geom_point(
-        data = carb_dat[carb_dat$Stratum=="2cm"&
-                          carb_dat$Shell.treatment=="No Shell",],
-              aes(x=Date, y = InSitu.pH, colour = Site),
-              cex = 2, pch=21)+ #No shell is solid line
-  
-   geom_point(
-     data = carb_dat[carb_dat$Stratum=="Bottom water"&
-                       carb_dat$Shell.treatment=="No Shell",],
-              aes(x=Date, y = InSitu.pH, colour = Site),
-              cex = 2, pch=19)+ #No shell is filled in circle
-      #geom_point(
-          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
-   #scale_color_manual(values=colors) +
-   guides(colour = guide_legend(override.aes = list(size=5)))+
-   ggtitle('B. pH')+
-   ylab("pH")+
-   facet_wrap(~ Site)
- gg1
-```
-
-```{r}
-# 
  gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=InSitu.pH, colour = Site))+
    geom_line(aes(), cex = 1, linetype=3,)+
    ylim(7.2,8.3)+
@@ -288,4 +295,475 @@ theme_classic()+
  gg2
  
  ggarrange(gg1, gg2, common.legend = TRUE, legend="bottom")
+```
+
+```{r}
+test <- carb_dat[carb_dat$Shell.treatment!="monitoring" |carb_dat$Shell.treatment!="outside cage",] %>%
+  group_by(Stratum, Date, Site) %>%
+  summarise(InSitu.pH = mean(InSitu.pH,na.rm = TRUE))
+test <- test[!is.na(test$InSitu.pH),]
+
+#Plot just no shell
+ gg1 <- ggplot(test[test$Stratum=="Bottom water",], aes(x=Date, y=InSitu.pH, colour = Site))+
+   geom_line( cex = 1, linetype=1,)+
+   ylim(7.1,8.3)+
+   xlim(as.POSIXct(c("2022-09-15 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = test[test$Stratum=="2cm",],
+              aes(x=Date, y = InSitu.pH, colour = Site),
+              cex = 2, pch=21)+ #No shell is solid line
+      geom_line( data = test[test$Stratum=="2cm",],
+              aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+
+
+   geom_point(
+     data = test[test$Stratum=="Bottom water",],
+              aes(x=Date, y = InSitu.pH, colour = Site),
+              cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle('B. pH')+
+   ylab("pH")+
+   facet_wrap(~ Site)
+ gg1
+
+```
+
+```{r}
+
+carb_dat_summer <- carb_dat.all[carb_dat.all$Date>"2022-04-01 00:00:00 EDT"&carb_dat.all$Date<"2022-09-15 00:00:00 EDT",]
+test <- carb_dat_summer[carb_dat_summer$Shell.treatment!="monitoring" |carb_dat_summer$Shell.treatment!="outside cage",] %>%
+  group_by(Stratum, Date, Site) %>%
+  summarise(InSitu.pH = mean(InSitu.pH,na.rm = TRUE))
+test <- test[!is.na(test$InSitu.pH),]
+
+ gg2 <- ggplot(test[test$Stratum=="Bottom water",], aes(x=Date, y=InSitu.pH, colour = Site))+
+   geom_line( cex = 1, linetype=1,)+
+   ylim(7.1,8.3)+
+   xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = test[test$Stratum=="2cm",],
+              aes(x=Date, y = InSitu.pH, colour = Site),
+              cex = 2, pch=21)+ #No shell is solid line
+      geom_point( data = test[test$Stratum=="2cm",],
+              aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, )+
+
+  
+   geom_point(
+     data = test[test$Stratum=="Bottom water",],
+              aes(x=Date, y = InSitu.pH, colour = Site),
+              cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle('B. pH')+
+   ylab("pH")+
+   facet_wrap(~ Site)
+ gg2
+ 
+ 
+ carb_dat_summer <- carb_dat_summer[!is.na(carb_dat_summer$InSitu.pH),]
+ gg1 <- ggplot(carb_dat_summer[carb_dat_summer$Stratum=="2cm"&carb_dat_summer$Shell.treatment=="Shell",], aes(x=Date, y=InSitu.pH, colour = Stratum))+
+   geom_point(aes(), cex = 2, pch=22)+
+    geom_line()+
+   #ylim(7.2,8.3)+
+   #xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = carb_dat_summer[carb_dat_summer$Stratum=="2cm"&
+                          carb_dat_summer$Shell.treatment=="No Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum),
+             linetype=1, cex = 2, pch=19)+ #No shell is solid line
+    geom_line(data = carb_dat_summer[carb_dat_summer$Stratum=="2cm"&
+                          carb_dat_summer$Shell.treatment=="No Shell",])+
+   geom_point(
+     data = carb_dat_summer[carb_dat_summer$Stratum=="Bottom water"&
+                       carb_dat_summer$Shell.treatment=="Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum),
+              cex = 2, pch=22)+
+    geom_line(data = carb_dat_summer[carb_dat_summer$Stratum=="Bottom water"&
+                       carb_dat_summer$Shell.treatment=="Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum))+
+   geom_point(
+     data = carb_dat_summer[carb_dat_summer$Stratum=="Bottom water"&
+                       carb_dat_summer$Shell.treatment=="No Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum),
+              cex = 2, pch=19)+ #No shell is filled in circle
+   geom_line( data = carb_dat_summer[carb_dat_summer$Stratum=="Bottom water"&
+                       carb_dat_summer$Shell.treatment=="No Shell",])+
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   #guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle('B. pH')+
+   ylab("pH")+
+   facet_wrap(~ Site)
+ gg1
+ 
+ 
+gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=InSitu.pH, colour = Stratum))+
+   geom_point(aes(), cex = 2, pch=22)+
+    geom_line()+
+   #ylim(7.2,8.3)+
+   xlim(as.POSIXct(c("2022-09-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum),
+             linetype=1, cex = 2, pch=19)+ #No shell is solid line
+    geom_line(data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",])+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum),
+              cex = 2, pch=22)+
+    geom_line(data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum))+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = InSitu.pH, colour = Stratum),
+              cex = 2, pch=19)+ #No shell is filled in circle
+   geom_line( data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",])+
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   #guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle('B. pH')+
+   ylab("pH")+
+   facet_wrap(~ Site)
+ gg1
+```
+
+```{r}
+
+  gg2 <- ggplot(carb_dat_summer[carb_dat_summer$Stratum=="Bottom water",], aes(x=Date, y=DO_mg_L, colour = Site))+
+   geom_line()+
+    geom_point()+
+   ylim(3,11)+
+   xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   ggtitle('C. Oxygen (mg/L)')+
+   ylab("pH")+
+   facet_wrap(~ Site)
+ gg2
+ 
+  gg2 <- ggplot(test[test$Stratum=="Bottom water",], aes(x=Site, y=InSitu.pH, colour = Stratum))+
+   #geom_line( cex = 1, linetype=1,)+
+   #ylim(7.1,8.3)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_boxplot(
+        data = test[test$Stratum=="2cm",],
+              aes(x=Site, y = InSitu.pH, colour = Stratum))+ #No shell is solid line
+   geom_boxplot(
+     data = test[test$Stratum=="Bottom water",],
+              aes(x=Site, y = InSitu.pH, colour = Stratum))+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('B. pH')+
+   ylab("pH")
+ gg2
+ 
+  gg2 <- ggplot(carb_dat_summer[carb_dat_summer$Stratum=="Bottom water",], aes(x=DO_mg_L, y=InSitu.pH, colour = Site))+
+    geom_point()+
+   #ylim(7,9)+
+   #xlim(3,12)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   ylab("pH")+
+   xlab("Dissolved Oxygen (mg / L)")
+   #ggtitle('C. Oxygen (mg/L)')+
+   #ylab("Oxygen (mg/L)")+
+#geom_smooth(method='lm', formula= y~x)#+
+   #facet_wrap(~ Site)
+ gg2
+ 
+#    gg2 <- ggplot(carb_dat_summer[carb_dat_summer$Stratum=="Bottom water",], aes(x=Water.Sed..Temp, y=DO_mg_L, colour = Site))+
+#     geom_point()+
+#    #ylim(3,11)+
+#    #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+# theme_classic()+
+#    #    geom_point(
+#    #      data = test[test$Stratum=="2cm",],
+#    #            aes(x=Date, y = InSitu.pH, colour = Site),
+#    #            cex = 2, pch=21)+ #No shell is solid line
+#    #    geom_line( data = test[test$Stratum=="2cm",],
+#    #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+#    # 
+#    # 
+#    # geom_point(
+#    #   data = test[test$Stratum=="Bottom water",],
+#    #            aes(x=Date, y = InSitu.pH, colour = Site),
+#    #            cex = 2, pch=19)+ #No shell is filled in circle
+#       #geom_point(
+#           #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+#    #scale_color_manual(values=colors) +
+#    guides(colour = guide_legend(override.aes = list(size=5)))#+
+#    #ggtitle('C. Oxygen (mg/L)')+
+# 
+# #geom_smooth(method='lm', formula= y~x)#+
+#    #facet_wrap(~ Site)
+#  gg2
+```
+
+```{r}
+carb_dat <- carb_dat.all
+
+carb_dat <- carb_dat[carb_dat$Calculation.method!="bad",]
+carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
+
+carb_dat <- carb_dat[!is.na(carb_dat$DO_mg_L),]
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=DO_mg_L, y=InSitu.pH, colour = Site))+
+    geom_point()+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('C. Oxygen (mg/L)')+
+   #ylab("Oxygen (mg/L)")+
+geom_smooth(method='lm', formula= y~x)#+
+   #facet_wrap(~ Site)
+ gg2
+ 
+ 
+ carb_dat <- carb_dat[!is.na(carb_dat$DO_mg_L),]
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=DO_mg_L, y=pCO2_final, colour = Site))+
+    geom_point()+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('C. Oxygen (mg/L)')+
+   #ylab("Oxygen (mg/L)")+
+geom_smooth(method='lm', formula= y~x)#+
+   #facet_wrap(~ Site)
+ gg2
+
+
+ 
+  # carb_dat <- carb_dat[!is.na(carb_dat$DO_mg_L),]
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=Salinity, y=DIC))+
+    geom_point(color = "blue")+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+       geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=Salinity, y=Field.Alkalinity), color = "red")+
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   #guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('C. Oxygen (mg/L)')+
+   ylab("DIC or TA (umol / kg)")+
+#geom_smooth(method='lm', formula= y~x)+
+   facet_wrap(~ Site)
+ gg2
+ 
+  carb_dat <- carb_dat.all
+ carb_dat <- carb_dat[carb_dat$Site == "Ptown"|carb_dat$Site == "Eel",] # Removing dennis from graphs
+
+ 
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="2cm",], aes(x=Salinity, y=DIC))+
+    geom_point(color = "blue")+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+       geom_point(data = carb_dat[carb_dat$Stratum=="2cm",], aes(x=Salinity, y=Field.Alkalinity), color = "red")+
+   # #            cex = 2, pch=21)+ #No shell is solid line
+   # # 
+   # # 
+   # # geom_point(
+   # #   data = test[test$Stratum=="Bottom water",],
+   # #            aes(x=Date, y = InSitu.pH, colour = Site),
+   # #            cex = 2, pch=19)+ #No shell is filled in circle
+   #    #geom_point(
+   #        #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   # #scale_color_manual(values=colors) +
+   # #guides(colour = guide_legend(override.aes = list(size=5)))+
+   # #ggtitle('C. Oxygen (mg/L)')+
+   ylab("DIC or TA (umol / kg)")+
+#geom_smooth(method='lm', formula= y~x)+
+   facet_wrap(~ Site)
+ gg2
+```
+
+```{r}
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+    breaks = c(0, 93, 187, 276, Inf), 
+    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+
+gg2 <- ggplot(carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=DO_mg_L, y=DIC, colour = Site))+
+    geom_point()+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('C. Oxygen (mg/L)')+
+   #ylab("Oxygen (mg/L)")+
+geom_smooth(method='lm', formula= y~x)#+
+   facet_wrap(~ Site)
+ gg2
+ 
+ 
+ carb_dat <- carb_dat[!is.na(carb_dat$DO_mg_L),]
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=DO_mg_L, y=pCO2_final, colour = Site))+
+    geom_point()+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('C. Oxygen (mg/L)')+
+   ylab("pCO2 uatm")+
+   xlab("Oxygen (mg/L)")+
+
+geom_smooth(method='lm', formula= y~x)#+
+   #facet_wrap(~ Site)
+ gg2
+ 
+ 
+ carb_dat <- carb_dat[!is.na(carb_dat$DO_mg_L),]
+  gg2 <- ggplot(carb_dat[carb_dat$Stratum=="Bottom water",], aes(x=DO_mg_L, y=pH..pH.DIC., colour = Site))+
+    geom_point()+
+   #ylim(3,11)+
+   #xlim(as.POSIXct(c("2022-04-01 00:00:00 EDT","2022-09-15 00:00:00 EDT")))+
+theme_classic()+
+   #    geom_point(
+   #      data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=21)+ #No shell is solid line
+   #    geom_line( data = test[test$Stratum=="2cm",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site), cex = 1, linetype=2,)+
+   # 
+   # 
+   # geom_point(
+   #   data = test[test$Stratum=="Bottom water",],
+   #            aes(x=Date, y = InSitu.pH, colour = Site),
+   #            cex = 2, pch=19)+ #No shell is filled in circle
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('C. Oxygen (mg/L)')+
+   ylab("pH")+
+       xlab("Oxygen (mg/L)")+
+geom_smooth(method='lm', formula= y~x)#+
+   #facet_wrap(~ Site)
+ gg2
+ 
+ 
+ carb_dat[carb_dat$pCO2_final>750,]
+
 ```

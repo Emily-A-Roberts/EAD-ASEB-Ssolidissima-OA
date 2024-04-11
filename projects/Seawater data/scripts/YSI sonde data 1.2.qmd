@@ -88,9 +88,12 @@ plot(df.Eel$datetime,df.Eel$Sal, type = "b") # It looks like there are some bad 
 
 ```{r}
 df.Eel.hr <- df.Eel %>% 
-  mutate(datetime = 
-           lubridate::ceiling_date(datetime, 
-                                   unit = "6 hours")) %>% 
+  mutate(datetime =
+           lubridate::ceiling_date(datetime,
+                                   unit = "6 hours")) %>%
+  # mutate(datetime = 
+  #          lubridate::ceiling_date(datetime, 
+  #                                  unit = "hour")) %>% 
   dplyr::group_by(datetime)%>% 
   dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
 
@@ -125,9 +128,12 @@ df.Eel <- df.Eel[df.Eel$datetime>as.Date("2022-08-15"),]
 
 
 df.Eel.hr <- df.Eel %>% 
-  mutate(datetime = 
-           lubridate::ceiling_date(datetime, 
-                                   unit = "6 hours")) %>% 
+  mutate(datetime =
+           lubridate::ceiling_date(datetime,
+                                   unit = "6 hours")) %>%
+    # mutate(datetime = 
+    #        lubridate::ceiling_date(datetime, 
+    #                                unit = "hour")) %>% 
   dplyr::group_by(datetime)%>% 
   dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
 
@@ -200,9 +206,12 @@ plot(Eel_cond$Date, Eel_cond$Sal, type = "l")
 
 
 df.Eel.hr <-  Eel_cond %>% 
-  mutate(datetime = 
-           lubridate::ceiling_date(Date, 
-                                   unit = "6 hours")) %>% 
+  mutate(datetime =
+           lubridate::ceiling_date(Date,
+                                   unit = "6 hours")) %>%
+     # mutate(datetime = 
+     #        lubridate::ceiling_date(Date, 
+     #                                unit = "hour")) %>% 
   dplyr::group_by(datetime)%>% 
   dplyr::summarise_all(list(~mean(., na.rm = TRUE)))
 
@@ -256,12 +265,23 @@ Looking at this graph of salinity, it seems that the HOBO conductivity meter is 
 #### Predict missing salinity data
 
 ```{r}
+df.Eel.comb$season <- cut(lubridate::yday(df.Eel.comb$datetime - lubridate::days(79)), 
+    breaks = c(0, 93, 187, 276, Inf), 
+    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
 df.Eel.comb$Temp.diff <- df.Eel.comb$Temp.HOBO-df.Eel.comb$Temp.mx
+sal.pred.mod_seas <- lm(data = df.Eel.comb, 
+                   Sal ~ Sal.mx * Temp.mx * season) #with the Temp.diff, predicts only 0.408
+
 sal.pred.mod <- lm(data = df.Eel.comb, 
-                   Sal ~ Sal.mx + Temp.mx) #with the Temp.diff, predicts only 0.408
-  temp.pred.mod <- lm(df.Eel.comb$Temp ~ df.Eel.comb$Sal.mx + df.Eel.comb$Temp.mx)
+                   Sal ~ Sal.mx * Temp.mx) #with the Temp.diff, predicts only 0.408
+
+AIC(sal.pred.mod, sal.pred.mod_seas)
+
+  temp.pred.mod <- lm(df.Eel.comb$Temp ~ df.Eel.comb$Sal.mx * df.Eel.comb$Temp.mx)
 
   summary(sal.pred.mod)
+  summary(sal.pred.mod_seas)
   summary(temp.pred.mod)
   
 df.Eel.comb$Temp_pred <- predict(temp.pred.mod, newdata = df.Eel.comb)
@@ -271,9 +291,7 @@ df.Eel.comb$Temp[is.na(df.Eel.comb$Temp)] <- df.Eel.comb$Temp_pred[is.na(df.Eel.
 df.Eel.comb$Sal[is.na(df.Eel.comb$Sal)] <- df.Eel.comb$Sal_pred[is.na(df.Eel.comb$Sal)] 
 
 
-df.Eel.comb$season <- cut(lubridate::yday(df.Eel.comb$datetime - lubridate::days(79)), 
-    breaks = c(0, 93, 187, 276, Inf), 
-    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
 
 
 #Note that this predicts 40% of the the salinity
@@ -366,7 +384,7 @@ ggplot(df.Eel.comb.new, aes(x = Sal, y = Alk, color = Temp)) +   geom_point() +
   #xlim(as.POSIXct(c("5/15/22","11/01/22"), format = "%m/%d/%y"))
 ```
 
-#### Predict alkalinity timeseries
+#### Predict alkalinity timeseries - Eel
 
 Note - there is probably a better way to do this. Particularly, I think the fluctations within a day in temp and salinity may be confounded with temp and salinity fluctuations throughout a year. Filling in short term gaps it makes sense to use linear functions, but estimating alkalinity from salinity and temp over two years, I'm not sure because of the interaction with season and temp. Here is a tutorial on timeseries predictions [Time series forecasting  \|  TensorFlow Core](https://www.tensorflow.org/tutorials/structured_data/time_series) .
 
@@ -407,9 +425,15 @@ df.Eel.comb$Alk <- predict(object = pred_Alk_int_season, newdata = df.Eel.comb)
 plot(data = df.Eel.comb, Alk ~ datetime)
 points(data = df.Eel.comb.new, Alk ~ datetime, col = "green", pch = 20, cex = 1.2)
 
-df.Eel.comb$Alk <- predict(object = pred_Alk_no_seasons, newdata = df.Eel.comb)
-plot(data = df.Eel.comb, Alk ~ datetime)
+df.Eel.comb$Alk_pred <- predict(object = pred_Alk_no_seasons, newdata = df.Eel.comb)
+plot(data = df.Eel.comb, Alk_pred ~ datetime)
 points(data = df.Eel.comb.new, Alk ~ datetime, col = "green", pch = 20, cex = 1.2)
+
+
+df.Eel.comb.save <- df.Eel.comb
+df.Eel.comb.save$datetime <- format(df.Eel.comb.save$datetime, usetz=TRUE)
+
+write.csv(df.Eel.comb.save, file = "Eel.alk.estimate.6hr.csv")
 ```
 
 ## Ptown read in data
@@ -653,7 +677,7 @@ ggplot(df.P.comb.new, aes(x = Sal, y = Alk, color = Temp)) +   geom_point() +
   geom_smooth(method = "lm", se = FALSE)
 ```
 
-#### Predict alkalinity
+#### Predict alkalinity - Ptown
 
 ```{r}
 pred_Alk_season <- lm(data =df.P.comb.new, Alk ~ season + Sal + Temp) # These factors seem to explain about 60% of the variation
@@ -675,6 +699,11 @@ summary(pred_Alk_int_week)
 df.Ptown$Alk_pred <- predict(object = pred_Alk_season, newdata = df.Ptown)
 plot(data = df.Ptown, Alk_pred ~ datetime)
 points(data = df.P.comb.new, Alk ~ datetime, col = "green", pch = 20, cex = 1.2)
+
+df.Ptown.save <- df.Ptown
+df.Ptown.save$datetime <- format(df.Ptown.save$datetime, usetz=TRUE)
+
+write.csv(df.Ptown.save, file = "Ptown.alk.estimate.6hr.csv")
 ```
 
 ## Merge the two datasets

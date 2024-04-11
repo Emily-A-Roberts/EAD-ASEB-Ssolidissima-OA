@@ -15,6 +15,12 @@ library(ggpubr)
 library(data.table)
 library(kableExtra)
 library(knitr)
+
+library(RColorBrewer)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(ggsignif)
 setwd("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data")
 data_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data"
 
@@ -36,6 +42,11 @@ bd$CR_len.scaled <- bd$CR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$AR_len.scaled <- bd$AR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$RR_len.scaled <- bd$RR * (bd$Dry.weight^.76)/(bd$Length^2)*36^2
 bd$CI <- bd$Dry.weight/(bd$Length^3)
+
+bd$CR_len.unscaled <- bd$CR * (bd$Dry.weight^.76)
+bd$RR_len.unscaled <- bd$RR * (bd$Dry.weight^.76)
+
+
 
 bd$RR
 bd <- bd[bd$AE>0,]
@@ -66,17 +77,33 @@ gg1
 ```
 
 ```{r}
+bd <- bd[bd$Treatment!="OUT",]
+
+bd$Month <- factor(bd$Month, levels=c("September", "April", "June"))
+
+gg1 <- ggplot(data = bd, aes(x=Length, y=CR_len.unscaled, color = Month))+
+  geom_point(aes(shape=Treatment))+
+  #xlab("Dry weight") + 
+  facet_wrap(~ Site) +
+  theme_classic() +
+  ylab("Raw Clearance Rate (L/hr)")+ 
+  scale_color_brewer(palette="Set2")
+
+gg1
+
 gg1 <- ggplot(data = bd, aes(x=Length, y=CR_len.scaled, color = Month))+
   geom_point(aes(shape=Treatment))+
   #xlab("Dry weight") + 
-  facet_wrap(~ Site)
+  facet_wrap(~ Site)+
+  theme_classic()
 
 gg1
 
 gg1 <- ggplot(data = bd, aes(x=Length, y=AR_len.scaled, color = Month))+
   geom_point(aes(shape=Treatment))+
   #xlab("Dry weight") + 
-  facet_wrap(~ Site)
+  facet_wrap(~ Site)+
+  theme_classic()
 
 gg1
 
@@ -119,11 +146,7 @@ gm6 <- lm(CR ~ Treatment,
 ```
 
 ```{r}
-library(RColorBrewer)
-library(emmeans)
-library(multcomp)
-library(multcompView)
-library(ggsignif)
+
 
 
 # get (adjusted) weight means per group
@@ -175,7 +198,8 @@ gg_CR
 ```
 
 ```{r}
-model_means <- emmeans(lm(RR~Month*Site, data = bd), ~ Month * Site, data = bd)
+bd$RR_len.scaled
+model_means <- emmeans(lm(RR_len.scaled~Month*Site, data = bd), ~ Month * Site, data = bd)
 summary(lm(RR~Month*Site, data = bd))
  
 # show differences
@@ -202,9 +226,56 @@ ylab_text <- expression(paste("RR (mg  ",hr^-1, ")"))
 gg_RR <- ggplot(data = as.data.frame(cld_out), 
             aes(x = interaction(Month, Site), y = emmean, fill = Month)) +
   geom_bar(stat = "identity") +
-  geom_errorbar(aes(ymin = emmean + SE, ymax = emmean - SE), width = 0.2, position = position_dodge(0.9)) +
+  geom_errorbar(aes(ymin = emmean-SE, ymax = emmean + SE), width = .2, position = position_dodge(0.9)) +
+geom_linerange(aes(ymin = emmean-SE, ymax = emmean + SE), width = .2, position = position_dodge(0.9))+
   labs(x = "Site and Month", y = ylab_text)+
-    ylim(c(0,2.5))+
+    ylim(c(-.15,1))+
+  #theme_minimal(legend.position = "none")+
+  geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
+  theme_classic()+
+  scale_x_discrete(labels = my_x_labels) + 
+  scale_fill_brewer(palette="Set2")
+gg_RR
+
+RR_scaled_emmeans <- cld_out
+
+
+
+```
+
+```{r}
+bd$RR_len.unscaled
+model_means <- emmeans(lm(RR_len.unscaled~Month*Site, data = bd), ~ Month * Site, data = bd)
+summary(lm(RR~Month*Site, data = bd))
+ 
+# show differences
+pairs(model_means, adjust = "Tukey", alpha = 0.05)
+#> P value adjustment: tukey method for comparing a family of 3 estimates
+
+# add letters to each mean
+cld_out <- cld(object = model_means,
+    adjust = "Tukey",
+    Letters = letters,
+    alpha = 0.05)
+ 
+
+cld_out <- as.data.frame.list(cld_out)
+
+int_name <- interaction(cld_out$Month, cld_out$Site)
+library(tidyverse)
+  my_x_labels <- setNames(nm = c("June.Provincetown","April.Eel Pond","June.Eel Pond", "April.Provincetown","September.Eel Pond","September.Provincetown"),
+                            c("Prov","Eel","Eel","Prov", "Eel", "Prov"))
+
+str(model_means)
+ylab_text <- expression(paste("Raw Rejection Rate (mg  ",hr^-1, ")"))
+# Create a ggplot
+gg_RR <- ggplot(data = as.data.frame(cld_out), 
+            aes(x = interaction(Month, Site), y = emmean, fill = Month)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin =lower.CL, ymax = upper.CL), width = .2, position = position_dodge(0.9)) +
+#geom_linerange(aes(ymin = emmean-SE, ymax = emmean + SE), width = .2, position = position_dodge(0.9))+
+  labs(x = "Site and Month", y = ylab_text)+
+    ylim(c(-.3,1))+
   #theme_minimal(legend.position = "none")+
   geom_text(aes(label = .group, y = emmean + SE), vjust = -.1,)  +
   theme_classic()+

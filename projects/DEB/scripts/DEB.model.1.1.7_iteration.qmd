@@ -1,0 +1,686 @@
+---
+title: "DEB.Model.1.1.7"
+version: 1.1.7
+editor: visual
+date: "2024-03-08"
+author: "Emily Roberts"
+subtitle: "Growth predictions from environmental conditions"
+abstract: |
+"My goal is to: 1) check out if we get the same story by using the in-situ pH loggers and salinity to estimate alkalinity and pCO2. Completed 3/13/24: 1) add in the rest of Expt 2 data to the optimization 1.1.6) This one is buggy - filenames not saving correctly 1.1.5) Separated out the model optimization and graphing. 1.1.4) I am adding a MLE to estimate Xk. I'm not putting the model initialization for each initial length into the optimization function so that it can initialize correctly for all lengths and estimate multiple final lengths and optimize from all lengths. Now will do sensitivity to pCO2 enrichment. Back to June sampling timepoint."
+
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+---
+
+### DEB code developed Summer 2018
+
+Code DEB 3 state variables Emilien Pousse
+
+DEB with pCO2 effect
+
+```{r}
+library(reshape2)
+library(R.matlab)
+library("ggplot2")
+
+ScRCP = "Validation"
+Zone <-"Prov"
+Month.collected <- "Jun"
+```
+
+### Load packages, access files and DEB parameters
+
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/"
+dir_data_biodep <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Biodeposition/data/"
+filename <- paste(dir_data,sep="","results_Ensis_directus.mat")
+ParaMat=readMat(filename )
+Param <- list()
+```
+
+##### Initialize *Spisula solidissima* parameters
+
+Parameters from email correspondence 12/4/23
+
+```{r}
+
+Param$RhoV=15600; #(it is a general number for bivalves)
+Param$GammaL1=0.8
+Param$GammaL2=0.8
+Param$v= 0.011 #cm/d Energy conductance
+Param$Kappa=0.9607
+Param$KappaX <- 0.8 #K Digestion efficiency of food
+Param$Pm=10.64 #13.48
+Param$Eg=2360 	 #2361
+Param$Shape=0.32 #.32 is from surfclam field data (both sites) #Emilien used 0.37 
+Param$s_M= 17.8 	 	 	 	#7.49598
+Param$Pxm= 9.08/.8  	#30.6986/0.8
+Param$Em=Param$Pxm*Param$KappaX/Param$v
+
+#Arrhenius 5 parameter TPC
+Param$Ta <- 9018 #K
+Param$T1 <- 293.15 #K
+Param$Tl <- 277.3 #K
+Param$Th <- 296.5 #K
+Param$Tal <- 15601 #K
+Param$Tah <- 33775 #K
+
+Param$Lp <- 3 #cm From Pousse et al. 2023
+Param$dv <- 0.09 
+Param$RhoE <- 19600 #J/g
+
+#Parameters from conversation on GitHub on Jan 10, 2022
+Param$pHl <- 1011 #uatm Lower pCO2 boundary for ingestion
+Param$pHh <- 6778 #uatm Higher pCO2 boundary for ingestion
+
+Param$MpHl <- 700 #uatm Lower pCO2 boundary for maintenance costs
+Param$MpHh <- 1300 #uatm Higher pCO2 boundary for maintenance costs
+```
+
+##### Initialize *Spisula solidissima* pH parameters
+
+```{r}
+Param$del_pH=0.009 #Corrected according to email/table values 2/9/23
+```
+
+##### Chose the date when you want the model to start
+
+This will set different temperature and pCO2 forcing variables
+
+```{r}
+Oyster='now'# now; 2045; 2070; 2095
+```
+
+### Read in Cape Cod data
+
+Load CapeCod estimates
+
+```{r}
+CapeCod_dir <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/Transplant_test_dummy_data/"
+biometrics_data <- read.csv(paste(CapeCod_dir,"Lengths.csv",sep = "")) #Biometrics
+environ_data <- read.csv(paste(CapeCod_dir,"Environ.csv",sep = "")) #Environment
+
+POM_raw.Eel <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/TSM and Chl/Output_data/dailyPOMest.Eel.csv") #POM
+POM_raw.Prov <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/TSM and Chl/Output_data/dailyPOMest.Prov.csv") #POM
+
+pCO2.E <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.E.csv")
+pCO2.P <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.P.csv")
+
+Temp.E <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.E.csv")
+Temp.P <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.P.csv")
+
+Growth.all <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/Growth.est.len.csv", stringsAsFactors = FALSE)
+```
+
+### Cape Cod data temporal vector
+
+Make the temporal vector. Here I'm using tester data that is 20 days long, so made my start and stop dates match.
+
+```{r}
+if(Zone=='Prov'){
+  Growth.P<- Growth.all[Growth.all$Site=="Provincetown",]
+  Growth <- Growth.P
+  Oyster="nul"
+  date_start <- "09/27/2022"# Select a start date format = dd/mm/yyyy
+  #date_end<-"6/09/2023"
+  date_start <- as.Date(strptime(date_start,tz="UTC",format="%m/%d/%Y"))
+  #date_end <- as.Date(unique(Growth$End_date[Growth$Collection.month==Month.collected]))
+  date_end<-as.Date("2023-06-09") #End at last sampling point
+  MABpCO2.P=pCO2.P$y[as.Date(pCO2.P$x)>=date_start&as.Date(pCO2.P$x)<=date_end]
+  pH=MABpCO2.P 
+  Food <- POM_raw.Prov$y[as.Date(POM_raw.Prov$x)>=date_start&
+                           as.Date(POM_raw.Prov$x)<=date_end]
+  Temp <- Temp.P$x[as.Date(Temp.P$Date)>=date_start&
+                     as.Date(Temp.P$Date)<=date_end]+273 
+  Param$Xk=1.8 #Initial starting value for mle
+  
+      Growth$Elapsed_days[Growth$Elapsed_days==257] <- 256 #Correction for now because timing isn't matching up exactly. 
+    Growth.P$Elapsed_days[Growth.P$Elapsed_days==257] <- 256 #Correction for now because timing isn't matching up exactly. 
+    date_vec.P <- seq(date_start,date_end, by = 1)
+}
+
+if(Zone=='Eel'){
+  Growth.E<- Growth.all[Growth.all$Site=="Eel Pond",]
+  Growth <- Growth.E
+  Oyster="nul"
+  date_start<-"09/27/2022"# Select a start date format = dd/mm/yyyy
+
+  #date_start <- as.Date(strptime(date_start,tz="UTC",format="%m/%d/%Y"))
+  date_start <- as.Date(strptime(date_start,tz="UTC",format="%m/%d/%Y"))
+  date_end <- as.Date(unique(Growth$End_date[Growth$Collection.month==Month.collected]))
+    date_end<-as.Date("2023-06-09")
+  MABpCO2.E=pCO2.E$y[as.Date(pCO2.E$x)>=date_start&as.Date(pCO2.E$x)<=date_end]
+  pH=MABpCO2.E 
+  Food <- POM_raw.Eel$y[as.Date(POM_raw.Eel$x)>=date_start&
+                          as.Date(POM_raw.Eel$x)<=date_end]
+  Temp <- Temp.E$x[as.Date(Temp.E$Date)>=date_start&
+                     as.Date(Temp.E$Date)<=date_end]+273
+
+  Param$Xk=1.8 #Initial starting value for mle
+  
+  date_vec.E <- seq(date_start,date_end, by = 1)
+
+  }
+
+ 
+  #date_start <- as.numeric(strptime(date_start,tz="UTC",format="%m/%d/%Y"))
+  #date_end <- as.numeric(strptime(date_end,tz="UTC",format="%m/%d/%Y"))
+
+ dt   <- 86400  # The timestep in seconds, set to 1 day 
+                #(3600s = 1h / 86400s = 1day / 28800 = 8h )
+ pdt  <- 1 # The time step in days, set to 1 day (= unité de paramètres du DEB)
+ Xnum <- seq(from = as.numeric(date_start),as.numeric(date_end))#vector with each time step (sec) #Was seq(from = date_start,date_end,dt), but this doesn't makes sense for our code. The timestep just needs to be in days -ER 2/8/24
+ 
+ Xtps <- as.POSIXct(Xnum,origin='1970-1-1',tz="UTC")#vector with each time step (normal date)
+ ndt  <- length(Xnum)# Number of days
+# ndt=9125
+
+ 
+length(Temp)
+length(Food)
+length(pH)
+ndt
+```
+
+#### Verification of the forcing variables
+
+Check if all the forcing variables have the same length or have missing values
+
+```{r}
+if (length(Temp) <= 1 || length(Temp) != length(Food)) {
+  stop("Arguments Temp / Food / T_im have different lengths: ",length(Temp)," ; ",length(Food))
+}
+if (TRUE %in% is.na(Temp) || TRUE %in% is.na(Food)) {
+  stop(" Arguments Temp, Food and T_im must not have missing values.")
+}# Just to confirm that forcing variables are correct
+
+```
+
+### Get initial values
+
+Note - our surfclams start around a size of 1cm length as well, so this can be used without much modification.
+
+```{r}
+Init=c()
+Eri=c()
+Ei=c()
+Vi=c()
+DFMi=c()
+Li=c()
+
+```
+
+```{r}
+
+nbAnim <- length(Growth$Li)
+id=seq(1:nbAnim)
+
+p <- 1
+for (p in 1:nbAnim){
+  e=0.2#0.57 #Density of reserve: 1=full, 0=empty, rule: 0.2 winter, 0.6 summer 0.4 fall/spring
+  Li[p]   = Growth$Li[p]/10 #In cm
+  Vi[p]   = (Li[p] * Param$Shape)^3
+  Ei[p]=Param$RhoE*(8.18e-6-(Vi[p]*0.09))
+  
+  # if(Vi[p]>(Param$Lp*Param$Shape)^3){Eri[p]= ((phys$DFM[p] - (Vi[p] *Param$dv)) * Param$RhoE - Ei[p])
+  # }else{Eri[p]=0
+  # Ei[p]= max(c(0.000001,(phys$DFM[p]-Vi[p]*Param$dv)*Param$RhoE))} 
+  #Initial Ei is from DFM = E+V. E = Ei + Eir. If not reproductive then Eir = 0. I think max 0.000001 is set up to avoid the problem that Ei could be set to 0 inadvertantly. 
+  
+# if(Vi[p]>(Param$Lp*Param$Shape)^3){print("adult, determine dry flesh weight")
+#    }else{Eri[p]=0
+#    Ei[p]= max(c(0.000001,(phys$DFM[p]-Vi[p]*Param$dv)*Param$RhoE))} 
+  
+  Eri[p]=0
+  Ei[p]= .01*Vi[p]*Param$dv*Param$RhoE #MAR - set Ei as 1/100 of Vi. Fill in later using equation above using the dry weight at the start of the experiment. 
+  
+  if(Eri[p]<=0){Eri[p]=0}
+
+  DFMi[p] = ((Ei[p] + Eri[p])/Param$RhoE + Param$dv*Vi[p])
+}
+Init=as.data.frame(cbind(id,Li,Vi,Ei,Eri,DFMi))#,Egoi))
+
+
+  
+```
+
+"nbAnim" is the ID of the animal and/or simulation. Here there are two simulations, one for MAB and one for GB, and they are given the same starting lengths. Provincetown and Eel Pond will be two locations, and we can fit these runs to three independent data collections each for the three growth measurements. I'd like to start with this second experiment because temps also will be in the range for where we have data.
+
+### DEB model simulations
+
+Creation of the results database and launch DEB for each individual
+
+Number of returned parameters for fCalcDEB_4VE = 21
+
+```{r}
+Result<-array(NA, dim=c(ndt, 20, nbAnim)) # Make a 3D matrix [time, output value, individual]
+colnames(Result)<-c("jour","E","V","Er","DFM","L","e","PM","Pc1","f","Pg","Pa","Temp","cT","Xnum","Pl1","Pl2","Pm1","Pj","Pr")#name the parameters
+n_iter <- length(Temp)
+ErBalance=matrix(0,ncol=n_iter/365,nrow=nbAnim)
+```
+
+Here modifying the code for simplicity, since nbAnim is set to 2
+
+for (i in 1:nbAnim) {}
+
+### Temperature correction
+
+```{r}
+cT<-exp((Param$Ta /Param$T1)-(Param$Ta /Temp)) *
+  (1+exp((Param$Tal/Param$T1)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Param$T1)))/
+  (1+exp((Param$Tal/Temp)-(Param$Tal/Param$Tl))+exp((Param$Tah/Param$Th)-(Param$Tah/Temp    ))) 
+
+```
+
+```{r}
+ Xk <- 1.8
+ Param <- Param[-27]
+```
+
+```{r}
+
+    DEB_model_run <- function(par=par, Init=Init, Food=Food, Temp=Temp, 
+                              ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+                              Result=Result, Xnum=Xnum) {
+      i <- 1
+      ## Initialisation du DEB
+      for(i in 1:dim(Result)[3]){
+      L = Init$Li[i]
+      V = Init$Vi[i]
+      E   = Init$Ei[i] 
+      Er  = Init$Eri[i]
+      DFM = Init$DFMi[i]
+      
+      Xk = par[1]
+ 
+      
+      vecteur_f   = Food/(Food+Xk)
+      #vecteur_f   = Food/(Food+Param$Xk)
+      
+      
+      
+        ## Initialisation des sorties / energy expenditures
+    #############################
+    # nombre d'itération
+    n_iter = length(Temp)
+    # Création de vecteurs contenant les variables d'état
+    vecteur_E   = vector("numeric",length=n_iter)
+    vecteur_V   = vector("numeric",length=n_iter)
+    vecteur_Er  = vector("numeric",length=n_iter)
+    vecteur_temps = vector("numeric",length=n_iter) 
+    
+    # Initialization of the state variables
+    vecteur_E[1]=E[1]
+    vecteur_V[1]=V[1]
+    vecteur_Er[1]=Er[1]
+    
+    vecteur_temps[1]=0    ####################Utile?
+    Balance=0
+    
+    vecteur_Pa   = vector("numeric",length=n_iter)
+    vecteur_Px   = vector("numeric",length=n_iter)
+    vecteur_PM   = vector("numeric",length=n_iter)
+    vecteur_Pc1  = vector("numeric",length=n_iter)
+    vecteur_Pg   = vector("numeric",length=n_iter)
+    vecteur_Pr   = vector("numeric",length=n_iter)
+    vecteur_Pj   = vector("numeric",length=n_iter)
+    vecteur_Pl1  = vector("numeric",length=n_iter)
+    vecteur_Pl2  = vector("numeric",length=n_iter)
+    vecteur_Pm1  = vector("numeric",length=n_iter)
+    vecteur_Em  = vector("numeric",length=n_iter)#################### utile?
+    vecteur_cpH  = vector("numeric",length=n_iter)
+    vecteur_cpH_maint  = vector("numeric",length=n_iter)
+
+      
+  
+    
+      ## Start of the calculation loop
+      ################################
+      #for (n in 1:n_iter){
+    n <- 1
+    for (n in 1:ndt){
+        #### Correction of biological functions impacted by Temperature  
+        Pxm =  Param$Pxm* cT[n]*Param$s_M
+        Pm=Param$Pm* cT[n] 
+        v = Param$v* cT[n] * Param$s_M
+        
+        
+        # Compound parameters corrected  
+        Pam = Pxm * Param$KappaX
+        Em  = Pam/v
+        KappaG = (Param$dv*Param$RhoV)/Param$Eg
+        Vp = (Param$Shape*Param$Lp)^3
+        if(pH[n]<=1011){cpH=1}else{cpH=(Param$pHh-pH[n])/(Param$pHh-Param$pHl)}
+        vecteur_cpH[n] <- cpH
+        
+        Px  <- Pxm * vecteur_f[n] * V^(2/3)  #Ingestion
+        
+        Pa  <- Pxm * vecteur_f[n] * V^(2/3) * Param$KappaX *cpH
+    
+        
+        Pc1 <- E * (((Param$Eg * (v/V^(1/3))) + Pm) / (Param$Eg + (Param$Kappa * (E/V))))#Mobilization from E
+    
+        cpH_maint <- Param$del_pH*
+                       (min(max(pH[n]-Param$MpHl,0),Param$MpHh-Param$MpHl))
+        vecteur_cpH_maint[n] <- cpH_maint
+
+        
+        PM  <- (Pm * V)+cpH_maint*V^(2/3)*cT[n]#Maintenance costs 
+    
+        Pm1 <- min(PM,Param$Kappa * Pc1) #maintenance costs paid
+        
+        Pg  <- Param$Kappa * Pc1 - Pm1 #Growth
+        
+        Pj  <- min(c(V,Vp)) * Pm * ((1 - Param$Kappa) / Param$Kappa) #Maturation
+        
+        Pr   <- max(c((1 - Param$Kappa)*Pc1 - Pj,0)) # Reproduction
+        
+        
+        
+    
+        #SANS GONADE
+        # In case of long starvation (i.e. maintenance costs cannot be paid):
+        if(Param$Kappa*Pc1<=PM){# Maintenance costs cannot be paid
+          E  = max(0, E   + (Pa - Pc1) * pdt)
+          Pl2=1/Param$GammaL2*(PM-(Param$Kappa*Pc1))
+          Pr=0
+          if(V>=Vp&Er>=Pl2){
+            Er=max(0, Er  - Pr-Pl2 * pdt)
+            V  = max(0, V)
+          }else{
+            Pl1=1/Param$GammaL1*(PM-Param$Kappa*Pc1)
+            Er=0
+            V  = max(0, V   + (-Pl1)/(Param$RhoV*Param$dv) * pdt)
+            Pl2=0
+          }
+    
+        }else{
+          Pl1=0
+          Pl2=0
+          # State variables calculation
+          E  = max(0, E   + (Pa - Pc1) * pdt)
+          V  = max(0, V   + (Pg/Param$Eg-Pl1) * pdt)
+          Er = max(0, Er  + (Pr - Pl2) * pdt)
+          if(V<Vp){Er=0}}
+        
+        ## More outputs 
+        ###############
+        DFM = (E+Er)/Param$RhoE + Param$dv*V #+ Ego*Param$dgo/Param$EGgo# Dry flesh mass
+        if(V^(1/3)/Param$Shape>=L){
+          L=V^(1/3)/Param$Shape
+        }
+        e = (E/V)/Em 
+        
+        
+        # State variables allocation
+        vecteur_E[n]   = E
+        vecteur_V[n]   = V
+        vecteur_Er[n]  = Er
+        
+        # Output variables
+        vecteur_temps[n]= n*pdt
+        vecteur_Pa[n]   = Pa
+        vecteur_Px[n]   = Px
+        vecteur_Pr[n]   = Pr
+        vecteur_Pj[n]   = Pj
+        vecteur_PM[n]   = PM
+        vecteur_Pc1[n]  = Pc1
+        vecteur_Pg[n]   = Pg
+    
+        vecteur_Pl1[n]  =Pl1
+        vecteur_Pl2[n]  =Pl2
+        vecteur_Pm1[n]  =Pm1
+        
+        #Result[n,1:20,i]=c(n,E,V,Er,DFM,L,e,PM,Pc1,vecteur_f[n],Pg,Pa,Temp[n],cT[n],Xnum[n],Pl1,Pl2,Pm1,Pj,Pr)
+        Result[n,1:20,i]=c(n,E,V,Er,DFM,L,e,PM,Pc1,vecteur_f[n],Pg,Pa,Temp[n],cT[n],Xnum[n],Pl1,Pl2,Pm1,cpH, cpH_maint)
+        #Length[i] <- Result[[ndt,6,i]]
+        #print(paste("/ timestep",n))
+         } 
+        #print(paste("/ ind.",i)) #Individual 1
+  
+       } 
+     return(Result)
+    }
+
+    # Result.check <- DEB_model_run(Init = Init,par= c(Xk = 5,sigma = .5), Food=Food, Temp=Temp, ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, Result=Result, Xnum=Xnum)
+    # 
+    # nbAnim <- dim(Result.check)[3]
+    # Length <- rep(NA,times = nbAnim)
+    # nbAnim <- dim(Result.check)[3]
+    # Length_1 <- rep(NA,times = nbAnim)
+    # Length_2 <- rep(NA,times = nbAnim)
+    # Length_3 <- rep(NA,times = nbAnim)
+    # collection <- unique(Growth$Elapsed_days)
+    # nbAnim.1 <- nrow(Growth[Growth$Elapsed_days==collection[1],])
+    # nbAnim.2 <- nrow(Growth[Growth$Elapsed_days==collection[2],])
+    # nbAnim.3 <- nrow(Growth[Growth$Elapsed_days==collection[3],])
+    # 
+    # nbAnim <- nbAnim.1+nbAnim.2+nbAnim.3
+    # 
+    # Length_1 <- as.vector(Result.check[collection[1],6,][1:nbAnim.1])    
+    # Length_2 <- as.vector(Result.check[collection[2],6,][1:nbAnim.2])
+    # Length_3 <- as.vector(Result.check[collection[3],6,][1:nbAnim.3])
+    # Length <- c(Length_1,Length_2,Length_3)
+    
+  NLL_Xk <- function(par=par, data_len=data_len, Init = Init, Food=Food, Temp=Temp, 
+                                ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+                                Result=Result, Xnum=Xnum) {
+    
+    Result.out <- DEB_model_run(Init = Init, par=par, Food=Food, Temp=Temp, 
+                                ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+                                Result=Result, Xnum=Xnum)
+    sigma = par[2]
+    nbAnim <- dim(Result.out)[3]
+    Length_1 <- rep(NA,times = nbAnim)
+    Length_2 <- rep(NA,times = nbAnim)
+    Length_3 <- rep(NA,times = nbAnim)
+    collection <- unique(data_len$Elapsed_days)
+    nbAnim.1 <- nrow(data_len[data_len$Elapsed_days==collection[1],])
+    nbAnim.2 <- nrow(data_len[data_len$Elapsed_days==collection[2],])
+    nbAnim.3 <- nrow(data_len[data_len$Elapsed_days==collection[3],])
+    nbAnim <- nbAnim.1+nbAnim.2+nbAnim.3
+
+    Length_1 <- as.vector(Result.out[collection[1],6,][1:nbAnim.1])    
+    Length_2 <- as.vector(Result.out[collection[2],6,][1:nbAnim.2])
+    Length_3 <- as.vector(Result.out[collection[3],6,][1:nbAnim.3])
+    Length <- c(Length_1,Length_2,Length_3)
+    
+    NLL <- -sum(dnorm(x = data_len$Lf/10, mean = Length, sd = sigma, log = TRUE))
+    return(NLL)
+    
+    
+    #   NLL_Xk <- function(par=par, data_len=data_len, Init = Init, Food=Food, Temp=Temp, 
+    #                             ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+    #                             Result=Result, Xnum=Xnum) {
+    # 
+    # Result.out <- DEB_model_run(Init = Init, par=par, Food=Food, Temp=Temp, 
+    #                             ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+    #                             Result=Result, Xnum=Xnum)
+    # sigma = par[2]
+    # nbAnim <- dim(Result.out)[3]
+    # Length <- rep(NA,times = nbAnim)
+    # Length <- as.vector(Result.out[ndt,6,][1:nbAnim])
+    # 
+    # NLL <- -sum(dnorm(x = data_len, mean = Length, sd = sigma, log = TRUE))
+    # return(NLL)
+   }
+
+
+```
+
+```{r}
+initial_guess <- c(Xk = 3, sigma = 1)
+str(initial_guess[1])
+
+par <- initial_guess
+
+if(Zone == "Eel"){
+MLE.E <- optim(
+      par = initial_guess, 
+      lower=c(.01,.001),
+      upper=c(100,100),
+      method="L-BFGS-B",
+      data_len = Growth.E,
+      fn = NLL_Xk, 
+      Food=Food, 
+      Param=Param, 
+      ndt=ndt, 
+      cT=cT, 
+      pH=pH, 
+      Init = Init,
+      pdt=pdt, 
+      Result=Result, 
+      Temp=Temp, 
+      Xnum=Xnum
+      )
+MLE <- MLE.E
+}
+
+#      Xk    sigma 
+#15.83707  0.10000 
+
+
+if(Zone == "Prov"){
+MLE.P <- optim(
+      par = initial_guess, 
+      lower=c(1,.001),
+      upper=c(10,100),
+      method="L-BFGS-B",
+      fn = NLL_Xk, 
+      data_len=Growth.P, 
+      Init = Init, Food=Food, 
+      Temp=Temp, 
+      ndt=ndt, 
+      Param=Param, 
+      cT=cT, 
+      pH=pH, 
+      pdt=pdt, 
+      Result=Result,
+      Xnum=Xnum
+      )
+MLE <- MLE.P
+}
+
+# $par
+#       Xk    sigma 
+# 5.201025 0.100000
+
+MLE
+
+```
+
+### Plot predictions vs. observations graph
+
+```{r}
+
+
+# str(Result) 
+# 
+# Result[1,,]
+# Result[,,1]
+# 
+# 
+# 
+# if(Zone == "Prov"){
+# 
+# Result.ar.P <- array(unlist(Result), dim = dim(Result))
+#     
+#     #nbAnim <- dim(Result.out)[3]
+#     #Length <- rep(NA,times = nbAnim)
+#     Length <- Result.ar.P[ndt,6,1:nbAnim]
+# }
+#     
+if(Zone == "Prov"){
+  Result.check <- DEB_model_run(Init = Init, par= MLE.P$par, Food=Food, Temp=Temp, 
+                              ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+                              Result=Result, Xnum=Xnum)
+  Result.out.P <- Result.check
+  #write.csv(as.data.frame(Result.P), file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/Prov.result.csv")
+
+#From before doing all timepoints  
+#nbAnim.P <- dim(Result.out.P)[3]
+#Length_f <- Result.out.P[ndt,6,][1:nbAnim.P]
+#Length_i <- Result.out.P[1,6,][1:nbAnim.P]
+
+    nbAnim.P <- dim(Result.check)[3]
+    Length <- rep(NA,times = nbAnim.P)
+    nbAnim <- dim(Result.check)[3]
+    Length_1 <- rep(NA,times = nbAnim)
+    Length_2 <- rep(NA,times = nbAnim)
+    Length_3 <- rep(NA,times = nbAnim)
+    collection <- unique(Growth$Elapsed_days)
+    nbAnim.1 <- nrow(Growth[Growth$Elapsed_days==collection[1],])
+    nbAnim.2 <- nrow(Growth[Growth$Elapsed_days==collection[2],])
+    nbAnim.3 <- nrow(Growth[Growth$Elapsed_days==collection[3],])
+    nbAnim <- nbAnim.1+nbAnim.2+nbAnim.3
+
+    Length_1 <- as.vector(Result.check[collection[1],6,][1:nbAnim.1])    
+    Length_2 <- as.vector(Result.check[collection[2],6,][1:nbAnim.2])
+    Length_3 <- as.vector(Result.check[collection[3],6,][1:nbAnim.3])
+    Length_f <- c(Length_1,Length_2,Length_3)
+
+
+Growth.pred.P <- Length_f-Growth.P$Li/10
+Growth.P$pred.Len.f <- Length_f
+Growth.P$pred.growth <- Growth.pred.P
+
+
+save.image(file=paste(Zone,'_DEB.output.RData',sep = ""))
+
+}
+
+if(Zone == "Eel"){
+    Result.check <- DEB_model_run(Init = Init, par=MLE.E$par, Food=Food, Temp=Temp,
+                                ndt=ndt, Param=Param, cT=cT, pH=pH, pdt=pdt, 
+                                Result=Result, Xnum=Xnum)
+  Result.out.E <- Result.check
+  #write.csv(as.data.frame(Result.E), file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/DEB/data/Eel.result.csv")
+  
+#nbAnim.E <- dim(Result.out.E)[3]
+#Length_f <- Result.out.E[ndt,6,][1:nbAnim.E]
+#Length_i <- Result.out.E[1,6,][1:nbAnim.E]
+
+    nbAnim.E <- dim(Result.check)[3]
+    Length <- rep(NA,times = nbAnim.E)
+    nbAnim <- dim(Result.check)[3]
+    Length_1 <- rep(NA,times = nbAnim)
+    Length_2 <- rep(NA,times = nbAnim)
+    Length_3 <- rep(NA,times = nbAnim)
+    collection <- unique(Growth$Elapsed_days)
+    nbAnim.1 <- nrow(Growth[Growth$Elapsed_days==collection[1],])
+    nbAnim.2 <- nrow(Growth[Growth$Elapsed_days==collection[2],])
+    nbAnim.3 <- nrow(Growth[Growth$Elapsed_days==collection[3],])
+    nbAnim <- nbAnim.1+nbAnim.2+nbAnim.3
+
+    Length_1 <- as.vector(Result.check[collection[1],6,][1:nbAnim.1])    
+    Length_2 <- as.vector(Result.check[collection[2],6,][1:nbAnim.2])
+    Length_3 <- as.vector(Result.check[collection[3],6,][1:nbAnim.3])
+    Length_f <- c(Length_1,Length_2,Length_3)
+
+
+Growth.pred.E <- Length_f-Growth.E$Li/10
+Growth.E$pred.Len.f <- Length_f
+Growth.E$pred.growth <- Growth.pred.E
+
+save.image(file=paste(Zone,'_DEB.output.RData',sep = ""))
+
+}
+
+
+if(ncol(Growth.E)==ncol(Growth.P)){
+save.image(file=paste(Sys.Date(),'All_DEB.output.RData',sep = ""))
+}
+
+```
+
+### Sensitivity to pCO2 enrichment
+
+I'm commenting this out because it recalculates variables that should be renamed
+
+```{r}
+print(paste("Done running the DEB model for",Zone))
+```

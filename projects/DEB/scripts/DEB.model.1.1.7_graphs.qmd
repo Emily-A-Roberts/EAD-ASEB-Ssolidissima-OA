@@ -1,0 +1,268 @@
+---
+title: "DEB.model.graphs"
+version: 1.1.7
+format: html
+editor: visual
+date: "2024-03-08"
+author: "Emily Roberts"
+subtitle: "Growth predictions from environmental conditions"
+abstract: |
+"1.1.7) My goal is to: 1) check out if we get the same story by using the in-situ pH loggers and salinity to estimate alkalinity and pCO2. Completed 3/13/24: 1) add in the rest of Expt 2 data to the optimization 1.1.6) This one is buggy - filenames not saving correctly 1.1.5) Separated out the model optimization and graphing. 1.1.4) I am adding a MLE to estimate Xk. I'm not putting the model initialization for each initial length into the optimization function so that it can initialize correctly for all lengths and estimate multiple final lengths and optimize from all lengths. Now will do sensitivity to pCO2 enrichment. Back to June sampling timepoint."
+
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+---
+
+## Load workspace from DEB model run
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+
+
+if(file.exists(paste(Sys.Date(),'All_DEB.output.RData',sep = ""))){
+  print(paste("loading today's DEB iteration output:",Sys.Date())) 
+  load(paste(Sys.Date(),'All_DEB.output.RData',sep = ""))
+  } else {print("loading a previous day's DEB iteration output")
+    load("2024-03-13All_DEB.output.RData")
+    }
+```
+
+## Plot temp, energy flux to maintenance, growth, and pCO2
+
+```{r}
+arr_long.E <- reshape2::melt(Result.out.E[,14,])
+arr_long.P <- reshape2::melt(Result.out.P[,14,])
+arr_long.E <- arr_long.E[arr_long.E$Var2==1,]
+arr_long.P <- arr_long.P[arr_long.P$Var2==1,]
+
+arr_long.E <- cbind(date_vec.E,arr_long.E, Site = rep("Eel",times = nrow(arr_long.E)))
+arr_long.P <- cbind(date_vec.P,arr_long.P, Site = rep("Prov",times = nrow(arr_long.P)))
+names(arr_long.P) <- names(arr_long.E)
+arr_long <- rbind(arr_long.P, arr_long.E)
+names(arr_long) <- c("Date","Day","nbAnim","cT","Site")
+
+ unique(Growth.P$Elapsed_days)
+  unique(Growth.E$Elapsed_days)
+
+arr_long$season <- case_when(
+  between(arr_long$Day, 0,70) ~ "Fall",
+  between(arr_long$Day, 71,205) ~ "Winter",
+  between(arr_long$Day, 206,256) ~ "Spring"
+)
+
+arr_long$Site <- factor(arr_long$Site, levels=c('Prov', 'Eel'))
+arr_long$season <- factor(arr_long$season, levels=c('Fall', 'Winter',"Spring"))
+
+
+ggplot(arr_long, aes(x=Day, y = cT, group = Site, color = Site))+
+  geom_line(aes(color = as.factor(Site)))+
+  theme_classic()
+
+ggplot(arr_long , aes(x=cT, fill=Site)) +
+    #geom_histogram(binwidth=50, alpha=.5, position="identity")+
+  theme_classic()+
+  geom_histogram(binwidth=.1, aes(y=..density..), position="identity", alpha=.5)+
+  facet_wrap(~season)
+
+ggplot(arr_long , aes(x=cT, fill=Site)) +
+    #geom_histogram(binwidth=50, alpha=.5, position="identity")+
+  theme_classic()+
+  geom_density( alpha=.5)+
+  facet_wrap(~season)
+
+
+#+
+  #geom_vline(aes(xintercept=700),   # Ignore NA values for mean
+  #             color="black", linetype="dashed", size=1)+
+  #geom_vline(aes(xintercept=1011),   # Ignore NA values for mean
+  #             color="black", linetype="solid", size=1)+ 
+  #scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+
+
+```
+
+```{r}
+arr_long.E <- reshape2::melt(Result.out.E[,8,])
+arr_long.P <- reshape2::melt(Result.out.P[,8,])
+arr_long.E <- arr_long.E[arr_long.E$Var2==1,]
+arr_long.P <- arr_long.P[arr_long.P$Var2==1,]
+arr_long.E <- cbind(arr_long.E, Site = as.factor(rep("Eel",times = nrow(arr_long.E))))
+arr_long.P <- cbind(arr_long.P, Site = as.factor(rep("Prov",times = nrow(arr_long.P))))
+arr_long <- rbind(arr_long.E, arr_long.P)
+head(arr_long.P)
+names(arr_long) <- c("Day","nbAnim","PM","Site")
+ggplot(arr_long, aes(x=Day, y = PM, group = Site, color = Site))+
+  geom_line(aes(color = as.factor(Site)))+
+  theme_classic()+
+  facet_wrap(~nbAnim)
+
+
+
+```
+
+```{r}
+Growth.P$Growth.obs <- (Growth.P$Lf-Growth.P$Li)/10
+Growth.E$Growth.obs <- (Growth.E$Lf-Growth.E$Li)/10
+dim(Growth.P)
+dim(Growth.E)
+Growth.comb <- rbind(Growth.P, Growth.E)
+Growth.comb
+
+Growth.comb$Collection.month <- factor(Growth.comb$Collection.month, levels=c('Dec', 'Apr', 'Jun'))
+
+ggplot(Growth.comb, aes(x=Growth.obs, y = pred.growth, group = Collection.month, color = Collection.month), size = 5)+
+  geom_point(size = 4, aes(shape = Site))+
+  scale_shape_manual(values = c(1, 19)) +
+  theme_classic()+
+  ylim(0,5)+
+  xlim(0,5)+
+  geom_abline(slope = 1, intercept = 0)+ 
+  scale_color_brewer(palette="Set2")+
+  ylab("DEB model growth prediction (cm)")+
+  xlab("Observed growth (cm)")+
+  guides(color = guide_legend(override.aes = list(size = 4)), shape = guide_legend(override.aes = list(size = 4)))
+
+
+ggplot(Growth.comb, aes(x=Collection.month, y = pred.growth-Growth.obs, group = Collection.month, color = Site))+
+  geom_boxplot()+
+  theme_classic()+
+  scale_color_brewer(palette="Set2")+
+  facet_wrap(~Site)+
+  geom_hline(yintercept=0)+
+  ylab("Predicted minus observed growth (cm)")+
+  xlab("Collection month")
+
+ggplot(Growth.comb, aes(x=Collection.month, y = (pred.growth-Growth.obs)/Growth.obs, group = Collection.month, color = Site))+
+  geom_boxplot()+
+  theme_classic()+
+  scale_color_brewer(palette="Set2")+
+  facet_wrap(~Site)+
+  geom_hline(yintercept=0)+
+  ylim(-2.5,2.5)+
+  ylab("Percent over or underestimation (%)")+
+  xlab("Collection month")
+```
+
+```{r}
+# MABpCO2.E.new <- cbind(MABpCO2.E, Site = rep("Eel",times = nrow(arr_long.E)))
+# MABpCO2.P.new <- cbind(MABpCO2.P, Site = rep("Prov",times = nrow(arr_long.P)))
+# arr_long <- as.data.frame(rbind(MABpCO2.E.new[,c(1:2)], MABpCO2.P.new[,c(1:2)]))
+# names(arr_long)<- c("pCO2","Site")
+# 
+# arr_long$Site <- as.factor(arr_long$Site)
+# arr_long$pCO2 <- as.numeric(arr_long$pCO2)
+# arr_long$Site <- factor(arr_long$Site, levels=c('Prov', 'Eel'))
+# 
+# dim(MABpCO2.E.new)
+# dim(MABpCO2.P.new)
+# 
+# ggplot(arr_long , aes(x=pCO2, fill=Site)) +
+#     #geom_histogram(binwidth=50, alpha=.5, position="identity")+
+#   theme_classic()+
+#   geom_histogram(binwidth=50, aes(y=..density..), position="identity", alpha=.5)+
+#   geom_vline(aes(xintercept=700),   # Ignore NA values for mean
+#                color="black", linetype="dashed", size=1)+
+#   geom_vline(aes(xintercept=1011),   # Ignore NA values for mean
+#                color="black", linetype="solid", size=1)+ 
+#   scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+# 
+# date_end_coll <- unique(Growth.E$End_date)
+# pCO2.E <- pCO2.E[as.Date(pCO2.E$x)>=date_start&as.Date(pCO2.E$x)<=as.Date(date_end_coll[3]),]
+# pCO2.P <- pCO2.E[as.Date(pCO2.E$x)>=date_start&as.Date(pCO2.E$x)<=as.Date(date_end_coll[3]),]
+# pCO2.E.new <- cbind(pCO2.E, Site = rep("Eel",times = nrow(pCO2.E)))
+# pCO2.P.new <- cbind(pCO2.P, Site = rep("Prov",times = nrow(pCO2.P)))
+# arr_long <- as.data.frame(rbind(pCO2.E.new, pCO2.P.new))
+# 
+# head(arr_long)
+# names(arr_long)<- c("pCO2","Site")
+
+
+arr_long.E <- MABpCO2.E
+arr_long.P <- MABpCO2.P
+# arr_long.E <- arr_long.E[arr_long.E$Var2==1,]
+# arr_long.P <- arr_long.P[arr_long.P$Var2==1,]
+
+Day <- seq(1,length(MABpCO2.E),by=1)
+arr_long.E <- data.frame(
+  as.Date(date_vec.E),
+  Day,
+  MABpCO2.E, 
+  Site = rep("Eel",times = length(MABpCO2.E)))
+
+arr_long.P <- data.frame(
+  as.Date(date_vec.P),
+  Day,
+  MABpCO2.P, 
+  Site = rep("Prov",times = length(MABpCO2.P)))
+names(arr_long.P) <- names(arr_long.E)
+arr_long <- rbind(arr_long.P, arr_long.E)
+
+
+names(arr_long) <- c("Date","Day","pCO2","Site")
+
+ unique(Growth.P$Elapsed_days)
+  unique(Growth.E$Elapsed_days)
+
+arr_long$season <- case_when(
+  between(arr_long$Day, 0,70) ~ "Fall",
+  between(arr_long$Day, 71,205) ~ "Winter",
+  between(arr_long$Day, 206,256) ~ "Spring"
+)
+
+arr_long$Site <- factor(arr_long$Site, levels=c('Prov', 'Eel'))
+arr_long$season <- factor(arr_long$season, levels=c('Fall', 'Winter',"Spring"))
+
+
+ggplot(arr_long, aes(x=Day, y = pCO2, group = Site, color = Site))+
+  geom_line(aes(color = as.factor(Site)))+
+  theme_classic()
+
+ggplot(arr_long , aes(x=pCO2, fill=Site)) +
+    #geom_histogram(binwidth=50, alpha=.5, position="identity")+
+  theme_classic()+
+  geom_histogram(binwidth=50, aes(y=..density..), position="identity", alpha=.5)+
+  facet_wrap(~season)
+
+ggplot(arr_long , aes(x=pCO2, fill=Site)) +
+    #geom_histogram(binwidth=50, alpha=.5, position="identity")+
+  theme_classic()+
+  geom_density( alpha=.5)+
+  facet_wrap(~season)+
+  geom_vline(aes(xintercept=700),   # Ignore NA values for mean
+               color="black", linetype="dashed", size=1)+
+  geom_vline(aes(xintercept=1011),   # Ignore NA values for mean
+               color="black", linetype="solid", size=1)+
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+```
+
+```{r}
+
+arr_long.E <- reshape2::melt(Result.out.E[,6,])
+arr_long.P <- reshape2::melt(Result.out.P[,6,])
+arr_long.E <- cbind(arr_long.E, Site = rep("Eel",times = nrow(arr_long.E)))
+arr_long.P <- cbind(arr_long.P, Site = rep("Prov",times = nrow(arr_long.P)))
+arr_long <- rbind(arr_long.E, arr_long.P)
+head(arr_long.P)
+names(arr_long) <- c("Day","nbAnim","Length","Site")
+ggplot(arr_long, aes(x=Day, y = Length, group = nbAnim))+
+  geom_line(aes(color = as.factor(nbAnim)))+
+  facet_wrap(~Site)+
+  theme_classic()
+
+arr_long_subset <- arr_long[arr_long$nbAnim == 2,]
+arr_long_subset$Site <- factor(arr_long_subset$Site, levels=c('Prov', 'Eel'))
+
+ggplot(arr_long_subset, aes(x=Day, y = Length, color = Site))+
+  geom_line()+
+  facet_wrap(~Site)+
+  ylab("Predicted length (cm)")+
+  ylim(c(0,5))+
+  theme_classic()
+```

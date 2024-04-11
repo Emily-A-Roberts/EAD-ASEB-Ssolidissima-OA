@@ -1355,17 +1355,27 @@ YSI.Ptown.dy <- aggregate(YSI[,c("Temp_P","pH_P","Sal_P","Hplus_P")],
 YSI.Eel.dy <- aggregate(YSI[,c("Temp_E","pH_E", "Sal_E","Hplus_E")], 
                          by = list(Date = cut(YSI$datetime, breaks="day")), 
                          FUN = mean, na.rm=TRUE)
+
+YSI.Eel.dy$Date <- as.POSIXct(as.character(YSI.Eel.dy$Date))
+YSI.Ptown.dy$Date <- as.POSIXct(as.character(YSI.Ptown.dy$Date))
+str(YSI)
+str(HOBOpH.Ptown.dy)
+str(HOBOpH.Eel.dy)
+str(YSI.Ptown.dy)
+str(YSI.Eel.dy)
+
 HOBOpH.Ptown.dy <- all.data.dy[all.data.dy$Site =="Ptown",]
 HOBOpH.Eel.dy <- all.data.dy[all.data.dy$Site =="Eel",]
+
 joined_Ptown <- merge(x=HOBOpH.Ptown.dy, y=YSI.Ptown.dy, by = "Date", all=T)
 joined_Eel <- merge(x=HOBOpH.Eel.dy, y=YSI.Eel.dy, by = "Date", all=T)
 ```
 
 ```{r}
-mod_Ptown_Hplus   <- lm(data = joined_Ptown,H_plus_conc ~ Hplus_P * Temp_P * Sal_P)
+mod_Ptown_Hplus <- lm(data = joined_Ptown,H_plus_conc ~ Hplus_P * Temp_P * Sal_P)
 mod_Ptown_pH   <- lm(data = joined_Ptown,pH ~ pH_P * Temp_P * Sal_P)
-mod_Ptown_Temp <- lm(data = joined_Ptown,Temp ~ pH_P + Temp_P + Sal_P) 
-mod_Ptown_Temp <- lm(data = joined_Ptown,Temp ~ Temp_P) 
+mod_Ptown_Temp <- lm(data = joined_Ptown,Temp ~ pH_P + Temp_P + Sal_P)
+mod_Ptown_Temp <- lm(data = joined_Ptown,Temp ~ Temp_P)
 summary(mod_Ptown_Hplus)
 summary(mod_Ptown_pH)
 summary(mod_Ptown_Temp)
@@ -1382,8 +1392,8 @@ points(data = joined_Ptown, pH ~ Date, col = "red")
 ```{r}
 mod_Eel_Hplus   <- lm(data = joined_Eel,H_plus_conc ~ Hplus_E * Temp_E * Sal_E)
 mod_Eel_pH   <- lm(data = joined_Eel,pH ~ pH_E * Temp_E * Sal_E)
-mod_Eel_Temp <- lm(data = joined_Eel,Temp ~ pH_E + Temp_E + Sal_E) 
-mod_Eel_Temp <- lm(data = joined_Eel,Temp ~ Temp_E) 
+mod_Eel_Temp <- lm(data = joined_Eel,Temp ~ pH_E + Temp_E + Sal_E)
+mod_Eel_Temp <- lm(data = joined_Eel,Temp ~ Temp_E)
 summary(mod_Eel_Hplus) #R2 .67
 summary(mod_Eel_pH) #R2 .72
 summary(mod_Eel_Temp) #R2 .99
@@ -1394,12 +1404,11 @@ plot(data = joined_Eel, Temp ~ Temp_E)
 ```
 
 ```{r}
-joined_Eel$Temp.pred <- predict.lm(object = mod_Eel_Temp, newdata = joined_Eel, 
-                                   na.action = na.pass)
-joined_Ptown$Temp.pred <- predict.lm(object = mod_Ptown_Temp, newdata = joined_Ptown, na.action = na.pass)
+# joined_Eel$Temp.pred <- predict.lm(object = mod_Eel_Temp, newdata = joined_Eel, 
+#                                    na.action = na.pass)
+# joined_Ptown$Temp.pred <- predict.lm(object = mod_Ptown_Temp, newdata = joined_Ptown, na.action = na.pass)
 
-# joined_Eel$pH.pred <- predict.lm(object = mod_Eel_pH, newdata = joined_Eel, na.action = na.pass)
-# joined_Ptown$pH.pred <- predict.lm(object = mod_Ptown_pH, newdata = joined_Ptown, na.action = na.pass)
+
 ```
 
 ```{r}
@@ -1452,13 +1461,13 @@ gg2 <- ggplot(all.data.dy, aes(x=Date, y=Temp, colour = Site))+
   labs(y=ylab)+
   #ylim(14,30)+
   xlim(as.POSIXct(c("2022-08-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
-    geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 1)+
-  geom_point(data = joined_Ptown, aes(x=as.POSIXct(Date),y=Temp_P), color = "orange", cex = .5)+
-  geom_point(data = joined_Eel, aes(x=as.POSIXct(Date),y=Temp_E), color = "green", cex = .5)+
-  #scale_color_manual(values=colors) +
-  guides(colour = guide_legend(override.aes = list(size=5)))+
-  geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = Water.Sediment..Temp, colour = Site),cex = 2, pch = 22)+
-  ggtitle('A. Temp')
+    geom_point(data = sampling.temp, aes(x,y), color = "black", cex = 1) +
+   geom_point(data = joined_Ptown, aes(x=as.POSIXct(as.character(Date)),y=Temp_P), color = "orange", cex = .5)+
+   geom_point(data = joined_Eel, aes(x=as.POSIXct(as.character(Date)),y=Temp_E), color = "green", cex = .5)+
+#   #scale_color_manual(values=colors) +
+   guides(colour = guide_legend(override.aes = list(size=5)))+
+   #geom_point(data = carb_dat[carb_dat$Stratum=="Bottom water",],aes(x=Date, y = Water.Sediment..Temp, color = Site),cex = 2, pch = 22)#+
+   ggtitle('A. Temp')
 
 gg2
 
@@ -1720,11 +1729,16 @@ Eel.sed$season <- factor(Eel.sed$season, levels=c("Autumn", "Winter","Spring", "
 
 ### Break carb dat dataset into two groups
 
+### & save workspace
+
 ```{r}
 carb_dat.P <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Ptown",]
 carb_dat.E <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Eel",]
 
+save.image(file=paste(Sys.Date(),'pH.output.RData',sep = ""))
+```
 
+```{r}
 ggplot(Ptown.sed, aes(y = pH, x = Date))+
   geom_line(aes(group = tide_group, 
                       color = state))+
@@ -1752,7 +1766,6 @@ ggplot(Eel.sed, aes(y = Temp, x = Date))+
   ggtitle("Eel Pond")+
   facet_wrap(vars(season), scales = "free", nrow = 4)+
   geom_point(data = carb_dat.E, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
-
 
 ```
 
@@ -1904,4 +1917,23 @@ plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
 points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
 write.csv(pCO2.approx.P, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.P.csv")
 write.csv(pCO2.approx.E, file = "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/pCO2.est.E.csv")
+```
+
+```{r}
+
+plot(as.Date(pCO2.approx.P$x),pCO2.approx.P$y, col = "orange")
+points(as.Date(pCO2.approx.E$x),pCO2.approx.E$y, col = "green")
+pCO2.approx.E <- as.data.frame(pCO2.approx.E)
+pCO2.approx.P <- as.data.frame(pCO2.approx.P)
+pCO2.approx.E$Site <- rep("Eel", times = nrow(pCO2.approx.E))
+pCO2.approx.P$Site <- rep("Prov", times = nrow(pCO2.approx.P))
+
+pCO2.all <- rbind(pCO2.approx.E, pCO2.approx.P)
+pCO2.all$Site <- as.factor(pCO2.all$Site)
+
+p <- ggplot(pCO2.all, aes(x=as.Date(x), y=y, group = Site, colour = Site)) +
+  geom_line() + 
+  xlab("") #+
+  #xlim(as.Date(c("2022-08-01","2023-06-15")))
+p
 ```

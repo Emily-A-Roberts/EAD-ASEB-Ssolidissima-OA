@@ -1,0 +1,171 @@
+---
+title: "DEB.model.graphs"
+format: html
+editor: visual
+date: "2024-03-08"
+author: "Emily Roberts"
+subtitle: "Growth predictions from environmental conditions"
+abstract: |
+"1.1.6) My goals are to: 1) add in the rest of Expt 2 data to the optimization, and 2) check out if we get the same story by using the in-situ pH loggers and salinity to estimate alkalinity and pCO2. 1.1.5) Separated out the model optimization and graphing. 1.1.4) I am adding a MLE to estimate Xk. I'm not putting the model initialization for each initial length into the optimization function so that it can initialize correctly for all lengths and estimate multiple final lengths and optimize from all lengths. Now will do sensitivity to pCO2 enrichment. Back to June sampling timepoint."
+
+#format: html
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+load("2024-03-10All_DEB.output.RData")
+
+library(scales)
+```
+
+```{r}
+arr_long.E <- reshape2::melt(Result.out.E[,14,])
+arr_long.P <- reshape2::melt(Result.out.P[,14,])
+arr_long.E <- cbind(arr_long.E, Site = rep("Eel",times = nrow(arr_long.E)))
+arr_long.P <- cbind(arr_long.P, Site = rep("Prov",times = nrow(arr_long.P)))
+arr_long <- rbind(arr_long.E, arr_long.P)
+names(arr_long) <- c("Day","nbAnim","cT","Site")
+ggplot(arr_long, aes(x=Day, y = cT, group = nbAnim, color = Site))+
+  geom_point(aes(color = as.factor(nbAnim)))+
+  theme_classic()
+  #facet_wrap(~Site)
+
+```
+
+```{r}
+arr_long.E <- reshape2::melt(Result.out.E[,14,])
+arr_long.P <- reshape2::melt(Result.out.P[,14,])
+arr_long.E <- arr_long.E[arr_long.E$Var2==1,]
+arr_long.P <- arr_long.P[arr_long.P$Var2==1,]
+
+arr_long.E <- cbind(arr_long.E, Site = as.factor(rep("Eel",times = nrow(arr_long.E))))
+arr_long.P <- cbind(arr_long.P, Site = as.factor(rep("Prov",times = nrow(arr_long.P))))
+arr_long <- rbind(arr_long.E, arr_long.P)
+names(arr_long) <- c("Day","nbAnim","cT","Site")
+
+ggplot(arr_long, aes(x=Day, y = cT, group = Site, color = Site))+
+  geom_point(aes(color = as.factor(Site)))+
+  theme_classic()
+  facet_wrap(~Site)
+```
+
+```{r}
+arr_long.E <- reshape2::melt(Result.out.E[,8,])
+arr_long.P <- reshape2::melt(Result.out.P[,8,])
+arr_long.E <- arr_long.E[arr_long.E$Var2==1,]
+arr_long.P <- arr_long.P[arr_long.P$Var2==1,]
+arr_long.E <- cbind(arr_long.E, Site = as.factor(rep("Eel",times = nrow(arr_long.E))))
+arr_long.P <- cbind(arr_long.P, Site = as.factor(rep("Prov",times = nrow(arr_long.P))))
+arr_long <- rbind(arr_long.E, arr_long.P)
+head(arr_long.P)
+names(arr_long) <- c("Day","nbAnim","PM","Site")
+ggplot(arr_long, aes(x=Day, y = PM, group = Site, color = Site))+
+  geom_line(aes(color = as.factor(Site)))+
+  theme_classic()+
+  facet_wrap(~nbAnim)
+
+
+
+```
+
+```{r}
+Growth.P$Growth.obs <- (Growth.P$Lf-Growth.P$Li)/10
+Growth.E$Growth.obs <- (Growth.E$Lf-Growth.E$Li)/10
+
+length(Growth.obs.P)
+length(Growth.obs.E)
+length(Growth.pred.P)
+length(Growth.pred.E)
+
+
+plot(Growth.pred.P~Growth.obs.P, ylim = c(0,3), xlim = c(0,3), col = "orange", pch = 21, ylab = "Predicted growth (cm)", xlab = "Observed growth (cm)")
+
+
+plot(Growth.pred.E~Growth.obs.E,  col = "green", pch = 21, ylim = c(0,2), xlim = c(0,2))
+```
+
+```{r}
+arr_long.P <- data.frame(
+  Pred = Growth.pred.P, 
+  Obs = Growth.obs.P, 
+  Site = rep("Prov",times = length(Growth.pred.P)))
+arr_long.E <- data.frame(
+  Pred = Growth.pred.E, 
+  Obs = Growth.obs.E, 
+  Site = rep("Eel",times = length(Growth.pred.E)))
+arr_long <- rbind(arr_long.E, arr_long.P)
+
+df.1.1 <- data.frame(x=c(0,0),y=c(3,3))
+
+arr_long$Site <- factor(arr_long$Site, levels = c("Prov","Eel"))
+
+ggplot(arr_long, aes(x=arr_long$Obs,y=arr_long$Pred, colour = Site))+
+  geom_point()+
+  ylim(c(0,3))+
+  xlim(c(0,3))+
+  geom_abline(slope = 1, intercept = 0)+
+  theme_classic()+
+  ylab("Predicted growth (cm)") + 
+  xlab("Observed growth (cm)")
+```
+
+```{r}
+MABpCO2.E.new <- cbind(MABpCO2.E, Site = rep("Eel",times = nrow(arr_long.E)))
+MABpCO2.P.new <- cbind(MABpCO2.P, Site = rep("Prov",times = nrow(arr_long.P)))
+arr_long <- as.data.frame(rbind(MABpCO2.E.new[,c(1:2)], MABpCO2.P.new[,c(1:2)]))
+names(arr_long)<- c("pCO2","Site")
+
+arr_long$Site <- as.factor(arr_long$Site)
+arr_long$pCO2 <- as.numeric(arr_long$pCO2)
+arr_long$Site <- factor(arr_long$Site, levels=c('Prov', 'Eel'))
+
+dim(MABpCO2.E.new)
+dim(MABpCO2.P.new)
+
+ggplot(arr_long , aes(x=pCO2, fill=Site)) +
+    #geom_histogram(binwidth=50, alpha=.5, position="identity")+
+  theme_classic()+
+  geom_histogram(binwidth=50, aes(y=..density..), position="identity", alpha=.5)+
+  geom_vline(aes(xintercept=700),   # Ignore NA values for mean
+               color="black", linetype="dashed", size=1)+
+  geom_vline(aes(xintercept=1011),   # Ignore NA values for mean
+               color="black", linetype="solid", size=1)+ 
+  scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
+```
+
+```{r}
+
+arr_long.E <- reshape2::melt(Result.out.E[,6,])
+arr_long.P <- reshape2::melt(Result.out.P[,6,])
+arr_long.E <- cbind(arr_long.E, Site = rep("Eel",times = nrow(arr_long.E)))
+arr_long.P <- cbind(arr_long.P, Site = rep("Prov",times = nrow(arr_long.P)))
+arr_long <- rbind(arr_long.E, arr_long.P)
+head(arr_long.P)
+names(arr_long) <- c("Day","nbAnim","Length","Site")
+ggplot(arr_long, aes(x=Day, y = Length, group = nbAnim))+
+  geom_line(aes(color = as.factor(nbAnim)))+
+  facet_wrap(~Site)+
+  theme_classic()
+
+arr_long_subset <- arr_long[arr_long$nbAnim == 2,]
+arr_long_subset$Site <- factor(arr_long_subset$Site, levels=c('Prov', 'Eel'))
+
+ggplot(arr_long_subset, aes(x=Day, y = Length, color = Site))+
+  geom_line()+
+  facet_wrap(~Site)+
+  ylab("Predicted length (cm)")+
+  ylim(c(0,3))+
+  theme_classic()
+```

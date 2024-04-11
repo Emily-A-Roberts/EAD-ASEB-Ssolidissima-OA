@@ -1,0 +1,63 @@
+---
+title: "HOBO_pH_plots_part2_1.2.qmd"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library(ggplot2)
+library(lemon)
+
+load("HOBO_pH_plots1.2.RData")
+
+```
+
+You can add options to executable code like this
+
+```{r fig.height=8, fig.width=10}
+
+
+
+
+x <- unique(Ptown.sed$season)[1]
+ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
+  geom_point(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~month(Date), scales="free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")
+
+
+x <- unique(Ptown.sed$season)[2]
+ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
+  geom_point(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~month(Date), scales="free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")
+
+x <- unique(Ptown.sed$season)[3]
+ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
+  geom_point(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  facet_rep_wrap(~month(Date), scales="free", nrow = 4)+
+    scale_color_viridis(discrete = TRUE, option = "D")+
+  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

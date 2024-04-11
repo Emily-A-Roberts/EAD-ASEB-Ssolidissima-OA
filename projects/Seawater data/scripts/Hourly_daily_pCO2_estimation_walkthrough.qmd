@@ -1,0 +1,348 @@
+---
+title: "Hourly daily pCO2 estimation walkthrough"
+editor: visual
+format: 
+  pdf:
+    toc: TRUE
+    number-sections: TRUE
+    colorlinks: TRUE
+editor: visual
+
+date: 2023-12-23
+date-format: short
+abstract: ""
+---
+
+```{r}
+library(zoo)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+```
+
+## pH measurements
+
+```{r}
+if(file.exists(paste(Sys.Date(),'pH.output.RData',sep = ""))){
+  print(paste("loading today's pH data:",Sys.Date())) 
+  load(paste(Sys.Date(),'pH.output.RData',sep = ""))
+  } else {print("loading a previous day's pH data")
+    load("2024-03-17pH.output.RData")
+    }
+```
+
+## Alkalinity estimation
+
+Run YSI sonde data 1.2.qmd. This should give the following:
+
+```{r}
+alk.P <- read.csv("Ptown.alk.estimate.6hr.csv")
+alk.E <- read.csv("Eel.alk.estimate.6hr.csv")
+
+alk.P$datetime <- as.POSIXct(alk.P$datetime)
+alk.E$datetime <- as.POSIXct(alk.E$datetime)
+```
+
+## Temperature measurements
+
+Run HOBO_pH_plots1.1.qmd
+
+```{r}
+temp.P <- read.csv("~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.P.csv")
+temp.E <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Temp.est.E.csv"
+```
+
+## Combine
+
+```{r}
+## Check for duplicate rows that couldcause problems.
+n_occur <- data.frame(table(Eel.sed$Date))
+n_occur[n_occur$Freq > 1,]
+Eel.sed[Eel.sed$Date %in% n_occur$Var1[n_occur$Freq > 1],]
+
+# Remove 5 repeated date values
+Eel.sed.new <- subset(Eel.sed, as.numeric(rownames(Eel.sed)) <1995|as.numeric(rownames(Eel.sed)) >2000)
+# n_occur <- data.frame(table(Eel.sed.new$Date))
+# n_occur[n_occur$Freq > 1,]
+# Eel.sed.new[Eel.sed.new$Date %in% n_occur$Var1[n_occur$Freq > 1],]
+# 
+# Eel.sed.new[anyDuplicated(Eel.sed.new$Date),]
+#  Eel.sed.new <- Eel.sed.new[!duplicated(Eel.sed.new$Date),]
+# Eel.sed.new[anyDuplicated(Eel.sed.new$Date),]
+
+plot(Eel.sed.new$Date[1000:3000],pch = ".") 
+ 
+```
+
+```{r}
+library(lubridate)
+Ptown.sed$Date<-round_date(Ptown.sed$Date, unit="15 mins")
+Eel.sed.new$Date<-round_date(Eel.sed.new$Date, unit="15 mins")
+Eel.sed.new[anyDuplicated(Eel.sed.new$Date),]
+
+
+ts <- seq.POSIXt(min(Ptown.sed$Date), max(Ptown.sed$Date), by="15 mins")
+df <- data.frame(Date=ts)
+Ptown.sed <- full_join(x= df, 
+          y= Ptown.sed)
+Ptown.sed <- left_join(x= Ptown.sed, 
+          y= alk.P, 
+          join_by(Date == datetime))
+
+ts <- seq.POSIXt(min(Eel.sed.new$Date)+lubridate::days(1), max(Eel.sed.new$Date), by="15 mins")
+df <- data.frame(Date=ts)
+
+Eel.sed.new <- left_join(x= df, 
+          y= Eel.sed.new)
+
+anyDuplicated(alk.E$datetime)
+str(alk.E)
+alk.E$datetime
+
+Eel.sed.new <- left_join(x= Eel.sed.new, 
+          y= alk.E, 
+          join_by(Date == datetime))
+Eel.sed.new[anyDuplicated(Eel.sed.new$Date),]
+
+```
+
+```{r}
+#Interpolate 15 min timestamped data
+interpolate_15_min <- function(data1 = Ptown.sed) {
+ times.init <-data1[,1]
+ data2 <-zoo(data1[,c("pH_corr","Temp.x","Temp.sediment")],times.init)
+ data3 <- na.approx(object=data2,
+           xout=seq(min(times.init), max(times.init), "min"),maxgap = 100
+           )
+ data4 <- fortify.zoo(data3)
+ return(data4)
+}
+
+interpolate_15_min_alk <- function(data1 = Ptown.sed) {
+ times.init <-data1[,1]
+ data2 <-zoo(data1[,c("Alk_pred","Sal")],times.init)
+ data3 <- na.approx(object=data2,
+           xout=seq(min(times.init), max(times.init), "min"),maxgap = 100
+           )
+ data4 <- fortify.zoo(data3)
+ return(data4)
+}
+
+str(Ptown.sed)
+
+Ptown.inter1 <- interpolate_15_min(Ptown.sed)
+Ptown.inter1_alk <- interpolate_15_min_alk(Ptown.sed)
+Ptown.inter <- left_join(Ptown.inter1,Ptown.inter1_alk)
+
+Eel.inter1 <- interpolate_15_min(Eel.sed.new)
+Eel.inter1_alk <- interpolate_15_min_alk(Eel.sed.new)
+Eel.inter <- left_join(Eel.inter1,Eel.inter1_alk)
+
+# Ptown.inter <- Ptown.sed %>% 
+#   select(Date,pH_corr,Temp.x,Temp.sediment,Alk_pred,Sal)%>% 
+#   group_by(Date) %>% 
+#   mutate(pH_corr_2 = na.approx(pH_corr, na.rm = FALSE, maxgap = 10))
+# 
+# Eel.inter <- Eel.sed.new %>% 
+#   select(Date,pH_corr,Temp.x,Temp.sediment,Alk_pred,Sal)%>% 
+#   group_by(Date) %>% 
+#   mutate(across(c(pH_corr,Temp.x,Temp.sediment,Alk_pred,Sal),~na.approx(.x, na.rm = FALSE, maxgap = 50)))
+
+Eel.inter <- cbind(as.data.frame(Eel.inter), 
+                   Site = rep("Eel",times = nrow(Eel.inter)))
+Ptown.inter <- cbind(as.data.frame(Ptown.inter), 
+                     Site = rep("Prov",times = nrow(Ptown.inter)))
+names(Ptown.inter) <- names(Eel.inter)
+All.inter <- rbind(Ptown.inter, Eel.inter)
+names(All.inter)
+
+All.inter$season <- case_when(
+  between(All.inter$Index, as.Date("2022-06-11"),as.Date("2022-09-27")) ~ "Summer",
+  between(All.inter$Index, as.Date("2022-09-27"),as.Date("2022-12-05")) ~ "Fall",
+  between(All.inter$Index, as.Date("2022-12-05") ,as.Date("2023-04-17")) ~ "Winter",
+  between(All.inter$Index, as.Date("2023-04-17"),as.Date("2023-06-12")) ~ "Spring"
+) 
+
+All.inter$Site <- factor(All.inter$Site, levels = c("Prov", "Eel"))
+
+All.inter <- All.inter[All.inter$season!="Winter",]
+Expt2 <- All.inter[All.inter$season=="Fall"|All.inter$season=="Spring",]
+
+ggplot(Expt2 , aes(x=pH_corr, fill=Site)) +
+  theme_classic()+
+  geom_density( alpha=.5)+
+  facet_wrap(~season)
+
+
+
+# ggplot(Ptown.sed, aes(y = pH, x = Date))+
+#   geom_line(aes(group = tide_group, 
+#                       color = state))+
+#   ggtitle("Ptown")+ 
+#   #facet_wrap(vars(season), scales = "free", nrow = 4)+
+#   facet_rep_wrap(~season, scales="free", nrow = 4)+
+#   geom_point(data = carb_dat.P, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+# 
+# ggplot(Eel.sed, aes(y = pH, x = Date))+
+#   geom_line(aes(group = tide_group, color = state))+
+#   ggtitle("Eel Pond")+
+#   facet_wrap(vars(season), scales = "free", nrow = 4)+
+#   geom_point(data = carb_dat.E, aes(x=Date, y = InSitu.pH),cex = 2, pch=22)
+# 
+# ggplot(Ptown.sed, aes(y = Temp, x = Date))+
+#   geom_line(aes(group = tide_group, 
+#                       color = state))+
+#   ggtitle("Ptown")+ 
+#   #facet_wrap(vars(season), scales = "free", nrow = 4)+
+#   facet_rep_wrap(~season, scales="free", nrow = 4)+
+#   geom_point(data = carb_dat.P, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+# 
+# ggplot(Eel.sed, aes(y = Temp, x = Date))+
+#   geom_line(aes(group = tide_group, color = state))+
+#   ggtitle("Eel Pond")+
+#   facet_wrap(vars(season), scales = "free", nrow = 4)+
+#   geom_point(data = carb_dat.E, aes(x=Date, y = Water.Sediment..Temp),cex = 2, pch=22)
+```
+
+```{r}
+library(seacarb)
+# Gattuso, J.-P., Epitalon, J.-M. Lavigne H., & Orr J., 2021. seacarb: seawater carbonate chemistry. R package version 3.3.0. http://CRAN.R-project.org/package=seacarb. DOI
+
+# Seacarb package: K1 K2 from Leuker et al. 2000
+# KHSO4 Dickson
+# Total scale (1970s - called Seawater scale, Total scale has sulfate and not fluoride)
+# Boron value Lee et al. 2010
+
+All.inter[is.na(All.inter$Temp.x),]
+All.inter[All.inter$Temp.x < 0,]
+All.inter[All.inter$Sal < 5,]
+
+All.inter <- All.inter[!is.na(All.inter$Temp),]
+All.inter <- All.inter[!is.na(All.inter$Sal),]
+
+#pH and alk (alk is in umol/kg SW, convert to mol/kgSW)
+carb_out <- carb(flag=8, var1=All.inter$pH_corr, var2=All.inter$Alk_pred*10^-6, S=All.inter$Sal, T=All.inter$Temp.x, P=0, Patm=1.0, Pt=0, Sit=0, pHscale="T", kf="pf", k1k2="l", ks="d", b="u74", gas="potential", warn="y", eos="eos80", long=1.e20, lat=1.e20)
+
+All.inter.carb <- cbind(All.inter, carb_out)
+
+Expt2 <- All.inter.carb[All.inter.carb$season=="Fall"|All.inter.carb$season=="Spring",]
+
+ggplot(Expt2 , aes(x=pCO2, fill=Site)) +
+  theme_classic()+
+  geom_density(aes(y = after_stat(density)),alpha=.5)+
+  facet_wrap(~season)+
+  geom_vline(aes(xintercept=700),   # Ignore NA values for mean
+               color="black", linetype="dashed", size=1)+
+  geom_vline(aes(xintercept=1011),   # Ignore NA values for mean
+               color="black", linetype="solid", size=1)
+
+ggplot(Expt2 , aes(x=OmegaAragonite, fill=Site)) +
+  theme_classic()+
+  geom_density(aes(y = after_stat(density)),alpha=.5)+
+  facet_wrap(~season)
+
+```
+
+```{r}
+
+plot(head(Ptown.sed$Date,50), pch=".")
+points(Ptown.inter$Date, pch = "o")
+
+plot(head(Ptown.sed$Date,500),head(Ptown.sed$Temp.x,500), pch=".", col = "red")
+points(Ptown.inter$Date,Ptown.inter$Temp.x, pch=".", col = "blue")
+
+plot(Ptown.sed$Date,Ptown.sed$Temp.x, pch=".", col = "red")
+points(Ptown.inter$Date,Ptown.inter$Temp.x, pch=".", col = "blue")
+
+plot(Eel.sed.new$Date,Eel.sed.new$Temp.x, pch=".", col = "red")
+points(Eel.inter$Date,Eel.inter$Temp.x, pch=".", col = "blue")
+
+plot(Eel.sed.new$Date,Eel.sed.new$Temp.x, pch=".", col = "red")
+points(Eel.inter$Date,Eel.inter$Temp.x, pch=".", col = "blue")
+```
+
+### Calculate daily correction for pCO2 for maintenance and feeding
+
+```{r}
+#Parameters for cpH
+Param$pHl <- 1011 #uatm Lower pCO2 boundary for ingestion
+Param$pHh <- 6778 #uatm Higher pCO2 boundary for ingestion
+
+Param$MpHl <- 700 #uatm Lower pCO2 boundary for maintenance costs
+Param$MpHh <- 1300 #uatm Higher pCO2 boundary for maintenance costs
+
+Param$del_pH=0.009
+
+
+
+Expt2$cpCO2_maint <- Param$del_pH*(pmin(pmax(Expt2$pCO2-Param$MpHl,0),Param$MpHh-Param$MpHl))
+
+ggplot(Expt2 , aes(x=cpCO2_maint, fill=Site)) +
+  theme_classic()+
+  geom_density(aes(y = after_stat(density)),alpha=.5)+
+  ylim(0,3)+
+  facet_wrap(~season)
+
+Expt2$cpCO2_maint <- Param$del_pH*(pmin(pmax(Expt2$pCO2-Param$MpHl,0),Param$MpHh-Param$MpHl))
+
+Expt2 <- Expt2[!is.na(Expt2$pCO2),]
+
+Expt2$cpCO2_I <- rep(NA, length.out = nrow(Expt2))
+for(n in 1:length(Expt2$pCO2)){
+if(Expt2$pCO2[n]<=1011){Expt2$cpCO2_I[n]=1
+}else{Expt2$cpCO2_I[n]=(Param$pHh-Expt2$pCO2[n])/(Param$pHh-Param$pHl)}
+}
+
+ggplot(Expt2, aes(x=cpCO2_I, fill=Site)) +
+  theme_classic()+
+  geom_density(aes(y = after_stat(density)),alpha=.5)+
+  facet_wrap(~season)
+
+Expt2[Expt2$pH_corr<7.7,]
+```
+
+### Calculate ingestion and cost functions from aragonite saturation state
+
+```{r}
+m = (.8-.95)/(.37-.57)
+b = .95-m*.57
+
+H_arag_I <- (1-.5225)/.75
+L_arag_I <- (-.5225)/.75
+
+
+Expt2$OmegaAragonite <- as.numeric(Expt2$OmegaAragonite)
+Expt2$cpArag_I <- rep(NA, length.out = nrow(Expt2))
+Expt2$cpArag_I <- m*Expt2$OmegaAragonite+b
+Expt2$cpArag_I[Expt2$cpArag_I>=1]<- 1
+str(Expt2)
+
+Expt2[Expt2$cpArag_I<1,] #Just one value is above this threshold. 
+
+# for(n in 1:length(Expt2$OmegaAragonite)){
+# if(Expt2$OmegaAragonite[n]>=H_arag_I){Expt2$cpArag_I[n]=1
+# }else{Expt2$cpArag_I[n]=m*Expt2$OmegaAragonite[n]+b}
+# }
+
+m_M = (5.4--1.206)/(.57-1.16)
+b_M = 5.4-m*.57
+
+#Expt2$cpArag_maint <- m*(pmin(pmax(Expt2$OmegaAragonite-H_arag,0),H_arag-L_arag))
+Expt2$cpArag_maint <- m_M*Expt2$OmegaAragonite+b_M
+Expt2$cpArag_maint[Expt2$cpArag_maint>5.4] <- 5.4
+Expt2$cpArag_maint[Expt2$cpArag_maint<0] <- 0
+
+str(Expt2)
+
+Expt2[Expt2$cpArag_maint>0,] 
+
+
+#I'm getting
+
+# ggplot(Expt2, aes(x=cpArag_maint[Expt2$cpArag_maint>0,], fill=Site)) +
+#   theme_classic()+
+#   geom_density(aes(y = after_stat(density)),alpha=.5)+
+#   facet_wrap(~season)
+```
+
+Neither of these is interesting. None of the values fall in the range of interest. This might be because salinity was low in the experiment, so aragonite saturation state in the field is actually higher / more buffered due to greater alkalinity in the field, so it never reaches below the threshold leve.
