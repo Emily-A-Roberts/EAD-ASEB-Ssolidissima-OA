@@ -225,7 +225,41 @@ First, consider possible model structures:
 ```{r}
 #https://journals.sagepub.com/doi/full/10.1177/2515245920960351
 
+library(AICcmodavg)
+
+
+
 M1 <- lme(len_per_day*30~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_summer, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site) #Best model
+M5 <- update(M1, .~. + Treat:Month + Month:Site) 
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+gro.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+gro.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+
+M1 <- lme(CI~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_summer, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site) #Best model
+M5 <- update(M1, .~. + Treat:Month + Month:Site) 
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+CI.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+CI.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+
+
+
+M1 <- lme(Len~Treat+Month+Site, random = ~1|Enclosure,
                       data = growth_summer, method = "ML")
 M2 <- update(M1, .~. + Treat:Month)
 M3 <- update(M1, .~. + Treat:Site)
@@ -236,25 +270,97 @@ M7 <- update(M1, .~. + Month:Site + Treat:Site)
 M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
 M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
 
-AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 2.2 AIC of best model
+len.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+len.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
 
+M1 <- lme(AFDW~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_summer, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site) #Best model
+M4 <- update(M1, .~. + Month:Site)
+M5 <- update(M1, .~. + Treat:Month + Month:Site)
+M6 <- update(M1, .~. + Treat:Month + Treat:Site) #Best model
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+AFDW.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+AFDW.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+
+
+AIC_BIC_summary <- as.tibble(data.frame(
+  formula = c("No interaction", "T:M", "T:S", "M:S","T:M + M:S","T:M + T:S", "M:S + T:S","T:M + T:S + M:S", "T X M X S"),
+  Growth_df = gro.AIC$df,
+  Growth_AIC = gro.AIC$AIC - min(gro.AIC$AIC),
+  Growth_BIC = gro.BIC$BIC - min(gro.BIC$BIC),
+  CI_AIC = CI.AIC$AIC - min(CI.AIC$AIC),
+  CI_BIC = CI.BIC$BIC - min(CI.BIC$BIC),
+  Len_AIC = len.AIC$AIC - min(len.AIC$AIC),
+  Len_BIC = len.BIC$BIC - min(len.BIC$BIC),
+  AFDW_AIC = AFDW.AIC$AIC - min(AFDW.AIC$AIC),
+  AFDW_BIC = AFDW.BIC$BIC - min(AFDW.BIC$BIC)
+))
+
+```
+
+```{r}
+ft1 <- as_flextable(AIC_BIC_summary)%>%
+  line_spacing(space = 1, part = "all") %>%
+  padding(padding = .51, part = "header")%>%
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+  #autofit(add_w = 0, add_h = 0)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)%>%
+   delete_rows(i = 2, part = "header")
+ft1 <- bold(ft1, j = "Growth_AIC", i = ~ Growth_AIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "Growth_BIC", i = ~ Growth_BIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "CI_AIC", i = ~ CI_AIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "CI_BIC", i = ~ CI_BIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "Len_AIC", i = ~ Len_AIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "Len_BIC", i = ~ Len_BIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "AFDW_AIC", i = ~ AFDW_AIC < 2, bold = TRUE)
+ft1 <- bold(ft1, j = "AFDW_BIC", i = ~ AFDW_BIC < 2, bold = TRUE)
+ft1 <- ft1 |> 
+  separate_header() |> 
+  align(align = "center", part = "all") |>
+  autofit()
+
+ft1
+```
+
+```{r}
 
 M1 <- lme(len_per_day*30~Treat+Month+Site, random = ~1|Enclosure,
                       data = growth_fall_spring, method = "ML")
 M2 <- update(M1, .~. + Treat:Month)
 M3 <- update(M1, .~. + Treat:Site)
-M4 <- update(M1, .~. + Month:Site)
+M4 <- update(M1, .~. + Month:Site) #Best model
 M5 <- update(M1, .~. + Treat:Month + Month:Site) 
 M6 <- update(M1, .~. + Treat:Month + Treat:Site)
-M7 <- update(M1, .~. + Month:Site + Treat:Site) #Best model
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
 M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
 M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
 
-AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 4 AIC of best model
-
+gro.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+gro.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
 
 M1 <- lme(CI~Treat+Month+Site, random = ~1|Enclosure,
-                      data = growth_summer, method = "ML")
+                      data = growth_fall_spring, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site) #Best model
+M5 <- update(M1, .~. + Treat:Month + Month:Site) 
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+CI.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+CI.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+
+
+
+M1 <- lme(Len~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_fall_spring, method = "ML")
 M2 <- update(M1, .~. + Treat:Month)
 M3 <- update(M1, .~. + Treat:Site)
 M4 <- update(M1, .~. + Month:Site)
@@ -264,78 +370,125 @@ M7 <- update(M1, .~. + Month:Site + Treat:Site)
 M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
 M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
 
-AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 4 AIC of best model
+len.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+len.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
 
-
-M1 <- lme(CI~Treat+Month+Site, random = ~1|Enclosure,
+M1 <- lme(AFDW~Treat+Month+Site, random = ~1|Enclosure,
                       data = growth_fall_spring, method = "ML")
 M2 <- update(M1, .~. + Treat:Month)
-M3 <- update(M1, .~. + Treat:Site)
+M3 <- update(M1, .~. + Treat:Site) #Best model
 M4 <- update(M1, .~. + Month:Site)
-M5 <- update(M1, .~. + Treat:Month + Month:Site) 
-M6 <- update(M1, .~. + Treat:Month + Treat:Site)
-M7 <- update(M1, .~. + Month:Site + Treat:Site) #Best model
+M5 <- update(M1, .~. + Treat:Month + Month:Site)
+M6 <- update(M1, .~. + Treat:Month + Treat:Site) #Best model
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
 M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
 M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
 
-AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 3 AIC of best model
+AFDW.AIC <- AIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+AFDW.BIC <- BIC(M1, M2, M3, M4, M5, M6, M7, M8, M9) 
+
+
+AIC_BIC_summary <- as.tibble(data.frame(
+  formula = c("No interaction", "T:M", "T:S", "M:S","T:M + M:S","T:M + T:S", "M:S + T:S","T:M + T:S + M:S", "T X M X S"),
+  Growth_df = gro.AIC$df,
+  Growth_AIC = gro.AIC$AIC - min(gro.AIC$AIC),
+  Growth_BIC = gro.BIC$BIC - min(gro.BIC$BIC),
+  CI_AIC = CI.AIC$AIC - min(CI.AIC$AIC),
+  CI_BIC = CI.BIC$BIC - min(CI.BIC$BIC),
+  Len_AIC = len.AIC$AIC - min(len.AIC$AIC),
+  Len_BIC = len.BIC$BIC - min(len.BIC$BIC),
+  AFDW_AIC = AFDW.AIC$AIC - min(AFDW.AIC$AIC),
+  AFDW_BIC = AFDW.BIC$BIC - min(AFDW.BIC$BIC)
+))
+
+```
+
+```{r}
+ft2 <- as_flextable(AIC_BIC_summary)%>%
+  line_spacing(space = 1, part = "all") %>%
+  padding(padding = .51, part = "header")%>%
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+  #autofit(add_w = 0, add_h = 0)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)%>%
+   delete_rows(i = 2, part = "header")
+ft2 <- bold(ft2, j = "Growth_AIC", i = ~ Growth_AIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "Growth_BIC", i = ~ Growth_BIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "CI_AIC", i = ~ CI_AIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "CI_BIC", i = ~ CI_BIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "Len_AIC", i = ~ Len_AIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "Len_BIC", i = ~ Len_BIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "AFDW_AIC", i = ~ AFDW_AIC < 2, bold = TRUE)
+ft2 <- bold(ft2, j = "AFDW_BIC", i = ~ AFDW_BIC < 2, bold = TRUE)
+ft2 <- ft2 |> 
+  separate_header() |> 
+  align(align = "center", part = "all") |>
+  autofit()
+
+ft2
+```
+
+```{r}
+save_as_docx(
+  "Fig S1" = ft1, 
+  "Fig S2" = ft2,
+  path = "AIC_reports.docx")
 ```
 
 ```{r}
 #Growth
-  mod_growth_su <- lme(len_per_day*30~Treat*Month*Site,
+  mod_growth_su <- lme(len_per_day*30~Treat+Month+Site + Treat:Month + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_summer)
  
-  mod_growth_fall_spr <- lme(len_per_day*30~Treat*Month*Site,
+  mod_growth_fall_spr <- lme(len_per_day*30~Treat+Month+Site + Treat:Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_fall_spring)
 
 #CI
-  mod_CI_su <- lme(CI~Treat*Month*Site,
+  mod_CI_su <- lme(CI~Treat+Month+Site + Month:Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_summer)
 
-  mod_CI_fall_spr <- lme(CI~Treat*Month*Site,
+  mod_CI_fall_spr <- lme(CI~Treat+Month+Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_fall_spring)
 #Length
-    mod_Len_su <- lme(Len~Treat*Month*Site,
+    mod_Len_su <- lme(Len~Treat+Month+Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_summer)
  
-  mod_Len_fall_spr <- lme(Len~Treat*Month*Site,
+  mod_Len_fall_spr <- lme(Len~Treat+Month+Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_fall_spring)
 #Tissue weight
-    mod_AFDW_su <- lme(AFDW*30~Treat*Month*Site,
+    mod_AFDW_su <- lme(AFDW*30~Treat+Month+Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_summer)
  
-  mod_AFDW_fall_spr <- lme(AFDW~Treat*Month*Site,
+  mod_AFDW_fall_spr <- lme(AFDW~Treat+Month+Site + Month:Site,
                         #*Month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Enclosure, 
                         data = growth_fall_spring)
- 
+
 ```
 
 ```{r}
-ft1 <- as_flextable(mod_growth_su, fit = "fixed", just = "center")%>%
+ft3 <- as_flextable(mod_growth_su, fit = "fixed", just = "center")%>%
   add_header_lines("Summer Growth (mm/day)")%>%
   line_spacing(space = 1, part = "all") %>%
   padding(padding = .51, part = "header")%>%
@@ -344,7 +497,7 @@ ft1 <- as_flextable(mod_growth_su, fit = "fixed", just = "center")%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
 
-ft2 <- as_flextable(mod_growth_fall_spr, fit = "fixed", just = "center")%>%
+ft4 <- as_flextable(mod_growth_fall_spr, fit = "fixed", just = "center")%>%
   add_header_lines("Fall Growth (mm/day)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -352,7 +505,7 @@ ft2 <- as_flextable(mod_growth_fall_spr, fit = "fixed", just = "center")%>%
   set_table_properties(ft, layout = "autofit", width = 1)%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
-ft3 <- as_flextable(mod_CI_su, fit = "fixed", just = "center")%>%
+ft5 <- as_flextable(mod_CI_su, fit = "fixed", just = "center")%>%
   add_header_lines("Summer CI (cm/mm^3)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -361,7 +514,7 @@ ft3 <- as_flextable(mod_CI_su, fit = "fixed", just = "center")%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
 
-ft4 <- as_flextable(mod_CI_fall_spr, fit = "fixed", just = "center")%>%
+ft6 <- as_flextable(mod_CI_fall_spr, fit = "fixed", just = "center")%>%
   add_header_lines("Fall CI (cm/mm^3)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -369,7 +522,7 @@ ft4 <- as_flextable(mod_CI_fall_spr, fit = "fixed", just = "center")%>%
   set_table_properties(ft, layout = "autofit", width = 1)%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
-ft5 <- as_flextable(mod_Len_su, fit = "fixed", just = "center")%>%
+ft7 <- as_flextable(mod_Len_su, fit = "fixed", just = "center")%>%
   add_header_lines("Summer length (mm)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -378,7 +531,7 @@ ft5 <- as_flextable(mod_Len_su, fit = "fixed", just = "center")%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
 
-ft6 <- as_flextable(mod_Len_fall_spr, fit = "fixed", just = "center")%>%
+ft8 <- as_flextable(mod_Len_fall_spr, fit = "fixed", just = "center")%>%
   add_header_lines("Fall length (mm)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -386,7 +539,7 @@ ft6 <- as_flextable(mod_Len_fall_spr, fit = "fixed", just = "center")%>%
   set_table_properties(ft, layout = "autofit", width = 1)%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
-ft7 <- as_flextable(mod_AFDW_su, fit = "fixed", just = "center")%>%
+ft9 <- as_flextable(mod_AFDW_su, fit = "fixed", just = "center")%>%
   add_header_lines("Summer AFDW (g)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -395,7 +548,7 @@ ft7 <- as_flextable(mod_AFDW_su, fit = "fixed", just = "center")%>%
    paginate(init = TRUE, hdr_ftr = TRUE)
 
 
-ft8 <- as_flextable(mod_AFDW_fall_spr, fit = "fixed", just = "center")%>%
+ft10 <- as_flextable(mod_AFDW_fall_spr, fit = "fixed", just = "center")%>%
   add_header_lines("Fall AFDW (g)")%>%
   line_spacing(space = 1, part = "all") %>% 
   padding(padding = .51, part = "header")%>%
@@ -412,6 +565,8 @@ save_as_docx(
   "Fig S6" = ft6, 
   "Fig S7" = ft7, 
   "Fig S8" = ft8,
+  "Fig S9" = ft9, 
+  "Fig S10" = ft10,
   path = "reports.docx")
 
 # read_docx() %>% 

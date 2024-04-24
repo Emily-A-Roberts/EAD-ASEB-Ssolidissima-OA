@@ -17,8 +17,23 @@ library(lme4)
 theme_set(theme_bw())
 
 
+  library(kableExtra)
+ library(jtools)
+ library(huxtable)
+ library(nlme)
+ library(sjPlot) # table functions
+library(sjmisc) # sample data
+#source(sjTabLinReg)
+library(lme4)
+  library(tidymodels)
+ library(kableExtra)
+library(flextable)
+ library(broom)
+ library(broom.mixed)
+
+
 reporting_period <- "fall_spring"
-#reporting_period <- "summer"
+#reporting_period <- "summer" or "fall_spring" #Run for both to get graphs for both. 
 ```
 
 ```{r}
@@ -30,15 +45,30 @@ wd <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/dat
 growth_fall_spring <- read.csv(file = paste(wd,"2022_2023_surfclam_transplant - All.csv",sep=""), stringsAsFactors = F)
 
 growth <-growth_fall_spring
-#growth <- growth[growth$Buried_Dec=="S"|is.na(growth$Buried_Dec),] Issue at Eel
+
 
 head(growth)
+str(growth)
 #growth[is.na(growth$Collection.month),]
 #growth <- growth[!is.na(growth$Collection.month),]
 growth$Elapsed_days <- as.numeric(growth$Elapsed_days)
 growth$Collection1_date <- as.Date(growth$Collection1_date, format = "%m/%d/%Y")
 growth$Site <- as.factor(growth$Site)
 growth$Collection.month <- factor(growth$Collection.month, levels = c("December", "April", "June"))
+
+growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel Pond"))
+levels(growth$Site)[levels(growth$Site)=="Ptown"] <- "Provincetown"
+levels(growth$Collection.month) <- c("Dec", "Apr", "Jun")
+levels(growth$Treatment) <- c("Control","Shell addition")
+
+growth_fall_spring <- growth
+
+
+# For growth measurements, just use animals that were alive upon collection
+
+
+#growth <- growth[growth$Buried_Dec=="S"|is.na(growth$Buried_Dec),] Issue at Eel
+
 
 #Mark as alive or dead
 growth$AliveOrDead <- rep("Missing", nrow(growth))
@@ -69,9 +99,6 @@ growth$CI <- growth$AFDW/(growth$Len^3)*1000000
 plot(growth$CI)#All seem in the right range. 
 growth <- growth[!is.na(growth$CI),]
 
-growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel Pond"))
-levels(growth$Site) <- c("Prov", "Eel Pond")
-levels(growth$Collection.month) <- c("Dec", "Apr", "Jun")
 }
 ```
 
@@ -88,10 +115,20 @@ growth$Elapsed_days <- as.numeric(growth$Elapsed_days)
 growth$Collection1_date <- as.Date(growth$Collection_date, format = "%m/%d/%Y")
 growth$Site <- as.factor(growth$Site)
 growth$Collection.month <- factor(growth$Collection.month)
+levels(growth$Collection.month)[levels(growth$Collection.month)=='August_transcriptomics'] <- 'August'
+
+growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel_Pond", "Dennis"))
+levels(growth$Site) <- c("Prov", "Eel Pond", "Dennis")
+growth$Collection.month <- factor(growth$Collection.month, levels = c("July", "August", "September"))
+levels(growth$Collection.month) <- c("Jul", "Aug", "Sep")
+
+growth_summer <- growth
+
+# For growth measurements, just use animals that were alive upon collection
 
 growth <- growth[growth$AliveOrDead=="L",]
 growth <- growth[!is.na(growth$Collection.month),]
-levels(growth$Collection.month)[levels(growth$Collection.month)=='August_transcriptomics'] <- 'August'
+
 
 plot(growth$Len/growth$Height, xlim = c(340,360))
 mean(growth$Len/growth$Height, na.rm = TRUE) #1.285
@@ -112,10 +149,7 @@ plot(growth$CI)
 growth$AFDW <- growth$AFDW_g
 growth$DW <- as.numeric(growth$DW_g)
 
-growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel_Pond", "Dennis"))
-levels(growth$Site) <- c("Prov", "Eel Pond", "Dennis")
-growth$Collection.month <- factor(growth$Collection.month, levels = c("July", "August", "September"))
-levels(growth$Collection.month) <- c("Jul", "Aug", "Sep")
+
 
 }
 
@@ -160,15 +194,84 @@ plot(growth$Elapsed_days, growth$Start_len_mm)
 ## Ptown treatment comparison
 
 ```{r}
-#Length change through December
- growth <- growth[!is.na(growth$len_tot),]
+growth <- growth[!is.na(growth$len_tot),]
  mod_growth_full <- lme(len_tot/Elapsed_days*30~Treatment+Collection.month+Site,
                         #*Collection.month,
                         #+Start_len_mm+Start_len_mm:Site, 
                         random = ~1|Location_code, 
                         data = growth)
- library(kableExtra)
+```
+
+```{r}
+library(svglite)
+library(ftExtra)
+
+#https://ardata-fr.github.io/flextable-book/plotting-flextable.html
+ft <- as_flextable(mod_growth_full, fit = "fixed", just = "center")%>%
+  add_header_lines("Growth (mm/day)")
+ft
+
+gr <- gen_grob(ft)
+plot(gr)
+
+library(patchwork)
+
+ggarrange(gr,gr)
+
+
+
+library(tables)
+tab <- tabular(
+    (Species + 1) ~ (n = 1) + Format(digits = 2) *
+      (Sepal.Length + Sepal.Width) * (mean + sd),
+    data = iris
+  )
+as_flextable(tab)
+```
+
+```{r}
+#Length change 
+#https://stackoverflow.com/questions/77037940/how-to-convert-nlme-summary-object-into-table
+
+ 
+
  summary(mod_growth_full)
+
+
+ anova(mod_growth_full)
+ 
+ 
+ summary(mod_growth_ful)$tTable %>%
+  as_tibble(rownames="variable") %>%
+  knitr::kable(digits=3)
+ 
+
+fit <- linear_reg()  %>%  
+    set_engine("lm") %>%  
+    fit(formula = mpg ~ cyl, data = mtcars)
+fit %>% tidy()
+fit %>% glance()
+ 
+
+
+ mod_growth_full <- lmer(len_tot/Elapsed_days*30~Treatment+Collection.month+Site+(1|Location_code), data = growth)
+
+
+ 
+as_flextable(mod_growth_full, options(show.signif.stars = FALSE))
+ 
+mod.out <- anova(mod_growth_full) 
+mod.out%>%
+  kbl(caption = "Mixed model output")%>%
+  kable_classic(full_width=F, html_font = "Cambria")%>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"))
+
+mod.out <- coeff(mod_growth_full) 
+mod.out%>%
+  kbl(caption = "Mixed model output")%>%
+  kable_classic(full_width=F, html_font = "Cambria")%>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"))
+
   # M_int<-update(mod_growth_full, .~. - Start_len_mm:Site)
   # M <- update(M_int, ~. - Treatment:Site)
   # M2 <- update(M_int, ~. - Start_len_mm)
@@ -178,6 +281,9 @@ plot(growth$Elapsed_days, growth$Start_len_mm)
 #   summary(M2)
 # AIC(mod_growth_full,M_int,M,M2)
 
+
+
+write.csv(summary(mod_growth_full), "LMER output_growth.csv")
 
 
 
@@ -291,10 +397,7 @@ ggarrange(gg1,gg3, ncol=2, common.legend = TRUE, legend = "right")
 ```
 
 ```{r}
-growth$Site <- factor(growth$Site, levels = c("Ptown", "Eel Pond"))
-levels(growth$Site)[levels(growth$Site)=="Ptown"] <- "Provincetown"
-levels(growth$Collection.month) <- c("Dec", "Apr", "Jun")
-levels(growth$Treatment) <- c("Control","Shell addition")
+
 ```
 
 ```{r}
@@ -557,6 +660,8 @@ nls(data = growth, DW~(shape*len_tot/10)^3,
 param$shape <- 0.3209
 ```
 
+## Survival
+
 ```{r}
 #Summer
 growth_summer$Collection.month[growth_summer$Collection.month=="August_transcriptomics"] <- "August"
@@ -585,7 +690,41 @@ gg1 <- ggplot(data = live_count, aes(x = Collection.month, y = live/36,  colour 
   scale_color_brewer(palette="Set1")
 gg1
 
+str(growth)
 
+df_summary <- growth %>% 
+  group_by(Collection.month,Location_code,Site, Treatment) %>% 
+  #filter(AliveOrDead=="Alive") %>% 
+  #filter(Start_len_mm<=13&Start_len_mm>=10) %>% 
+  summarise(live = sum(AliveOrDead == 'L', na.rm = TRUE), n = n())
+
+df_summary$prop <- df_summary$live / df_summary$n
+
+#Nope this is how I analyze growth
+# m1 <- lme(data = df_summary, prop ~ Site + Treatment * Collection.month, random = (~1|Location_code))
+# summary(m1)
+# 
+# m1 <- lmer(data = df_summary, prop ~ Site * Treatment * Collection.month + (1|Location_code), REML = FALSE)
+# m2 <- lmer(data = df_summary, prop ~ Site + Treatment + Collection.month + (1|Location_code), REML = FALSE)
+# AICc(m1, m2)
+
+m1 <- lm(data = df_summary, prop ~ Site + Treatment * Collection.month)
+summary(m1)
+
+gg1 <- ggplot(data = df_summary, aes(x = Collection.month, y = prop,  colour = Treatment))+
+  #geom_line(aes(linetype = Treatment))+
+    #geom_point(aes(shape=Treatment))+
+  geom_boxplot()+
+  ylim(0,1)+
+  ylab("Proportion surviving (unitless)")+
+  xlab("Collection month")+
+  scale_color_brewer(palette="Set1")+
+  scale_color_discrete(name="Treatment")+
+  facet_wrap(~Site)
+gg1
+```
+
+```{r}
 #Fall through spring
 
 growth <- growth_fall_spring
@@ -615,7 +754,44 @@ gg2
 
 ggarrange(gg1,gg2,ncol=2, common.legend = TRUE, legend = "right")
 
+
+df_summary <- growth %>% 
+  group_by(Collection.month,Location_code,Site, Treatment) %>% 
+  #filter(AliveOrDead=="Alive") %>% 
+  #filter(Start_len_mm<=13&Start_len_mm>=10) %>% 
+  summarise(live = sum(AliveOrDead == 'L', na.rm = TRUE), n = n())
+
+df_summary$prop <- df_summary$live / df_summary$n
+df_summary <- df_summary[df_summary$Treatment!="Outside cage",]
+
+#Nope this is how I analyze growth
+# m1 <- lme(data = df_summary, prop ~ Site + Treatment * Collection.month, random = (~1|Location_code))
+# summary(m1)
+# 
+# m1 <- lmer(data = df_summary, prop ~ Site * Treatment * Collection.month + (1|Location_code), REML = FALSE)
+# m2 <- lmer(data = df_summary, prop ~ Site + Treatment + Collection.month + (1|Location_code), REML = FALSE)
+# AICc(m1, m2)
+
+m1 <- lm(data = df_summary, prop ~ Site + Treatment * Collection.month)
+summary(m1)
+
+gg2 <- ggplot(data = df_summary, aes(x = Collection.month, y = prop,  colour = Treatment))+
+  #geom_line(aes(linetype = Treatment))+
+    #geom_point(aes(shape=Treatment))+
+  geom_boxplot()+
+  ylim(0,1)+
+  ylab("Proportion surviving (unitless)")+
+  xlab("Collection month")+
+  scale_color_brewer(palette="Set1")+
+  scale_color_discrete(name="Treatment")+
+  facet_wrap(~Site)
+gg2
+
 # I need to include missing clams as dead clams or else if we didn't pull up clam shells this would bias the numbers. 
+```
+
+```{r}
+ggarrange(gg1,gg2, ncol=2, common.legend = TRUE, legend = "right")
 ```
 
 ```{r}
