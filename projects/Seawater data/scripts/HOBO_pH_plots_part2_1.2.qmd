@@ -15,17 +15,81 @@ When you click the **Render** button a document will be generated that includes 
 ```{r}
 library(ggplot2)
 library(lemon)
+library(viridis)
 
 load("HOBO_pH_plots1.2.RData")
 
 ```
 
-You can add options to executable code like this
+```{r}
+dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/"
+#carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_wgraphs.csv", sep = ""), stringsAsFactors = FALSE)
+carb_dat <- read.csv(paste(dir_data,"Surfclam_transplant_carbonate_data_flagged.xlsx - Transplant_site_data.csv", sep = ""), stringsAsFactors = FALSE)
+
+#str(carb_dat)
+carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%Y")
+carb_dat <- carb_dat[!is.na(carb_dat$Date),]
+carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
+carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
+carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
+carb_dat$Site[carb_dat$Site == "East Dennis"] <- "Den"
+
+carb_dat$Site <- as.factor(carb_dat$Site)
+carb_dat <- carb_dat[carb_dat$Stratum!= "2cm control",] #Only include animal cages
+
+#carb_dat$Stratum[carb_dat$Stratum== "2cm control"] <- "2cm" #Pooling all samples for now
+
+carb_dat$Stratum <- as.factor(carb_dat$Stratum)
+carb_dat$Shell.treatment[carb_dat$Shell.treatment=="shell"] <- "Shell"
+carb_dat$Shell.treatment[carb_dat$Shell.treatment=="No shell"] <- "No Shell"
+
+carb_dat$Shell.treatment <- as.factor(carb_dat$Shell.treatment)
+#unique(carb_dat$Shell.treatment)
+carb_dat$Site<- factor(carb_dat$Site,levels =c("Ptown","Eel","Den"))
+
+#str(carb_dat)
+
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+    breaks = c(0, 93, 187, 276, Inf), 
+    labels = c("Spring", "Summer", "Autumn", "Winter"))
+
+
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+carb_dat$Arg.saturation <- carb_dat$Omega_Ar_final
+#carb_dat <- carb_dat[carb_dat$Calculation.method!="bad",]
+#carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
+
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+carb_dat$Water.Sediment..Temp <- carb_dat$Water.Sed..Temp
+
+
+# carb_dat$pH_all_points = carb_dat$pH..pH.DIC.
+# carb_dat$pH_all_points[!is.na(carb_dat$pH_total_scale_final)] = carb_dat$InSitu.pH[!is.na(carb_dat$pH_total_scale_final)]
+
+carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
+
+# carb_dat$InSitu.pH <- carb_dat$pH_all_points
+
+
+carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)), 
+     breaks = c(0, 93, 187, 276, Inf), 
+     labels = c("Spring", "Summer", "Autumn", "Winter"))
+carb_dat$season <- factor(carb_dat$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+Ptown.sed$season <- factor(Ptown.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+Eel.sed$season <- factor(Eel.sed$season, levels=c("Autumn", "Winter","Spring", "Summer"))
+
+carb_dat.all <- carb_dat
+
+carb_dat.P <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Ptown",]
+carb_dat.E <- carb_dat[carb_dat$Stratum=="Bottom water"&carb_dat$Site=="Eel",]
+
+```
 
 ```{r fig.height=8, fig.width=10}
 
-
-
+carb_dat.P$pH_questionable_BW
 
 x <- unique(Ptown.sed$season)[1]
 ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
@@ -33,9 +97,12 @@ ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
                       color = state))+
   ggtitle("Ptown")+ 
   #facet_wrap(vars(season), scales = "free", nrow = 4)+
-  facet_rep_wrap(~month(Date), scales="free", nrow = 4)+
+  facet_rep_wrap(~month(Date)+year(Date), scales="free", nrow = 4)+
+    ylim(7.4,8.4)+
     scale_color_viridis(discrete = TRUE, option = "D")+
-  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")
+  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")+
+    geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = pH_questionable_BW),cex = 2, pch=19, color = "red")
+
 
 
 x <- unique(Ptown.sed$season)[2]
@@ -44,20 +111,41 @@ ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
                       color = state))+
   ggtitle("Ptown")+ 
   #facet_wrap(vars(season), scales = "free", nrow = 4)+
-  facet_rep_wrap(~month(Date), scales="free", nrow = 4)+
+  facet_rep_wrap(~month(Date)+year(Date), scales="free", nrow = 4)+
+    ylim(7.4,8.4)+
     scale_color_viridis(discrete = TRUE, option = "D")+
-  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")
+  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")+
+    geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = pH_questionable_BW),cex = 2, pch=19, color = "red")
+
 
 x <- unique(Ptown.sed$season)[3]
-ggplot(Ptown.sed[Ptown.sed$season == x,], aes(y = pH, x = Date))+
+subset <- Ptown.sed[Ptown.sed$season == x & Ptown.sed$Date>=as.POSIXct("2023-01-01"),]
+
+ggplot(subset, aes(y = pH, x = Date))+
   geom_point(aes(group = tide_group, 
                       color = state))+
   ggtitle("Ptown")+ 
   #facet_wrap(vars(season), scales = "free", nrow = 4)+
-  facet_rep_wrap(~month(Date), scales="free", nrow = 4)+
+  facet_rep_wrap(~month(Date)+year(Date), scales="free", nrow = 4)+
     scale_color_viridis(discrete = TRUE, option = "D")+
-  geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")
+  ylim(7.4,8.4)+
+  geom_point(data = carb_dat.P[carb_dat.P$season == x & carb_dat.P$Date>=as.POSIXct("2023-01-01"),], aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")+
+    geom_point(data = carb_dat.P[carb_dat.P$season == x,], aes(x=Date, y = pH_questionable_BW),cex = 2, pch=19, color = "red")
+
+
 
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{r}
+ggplot(Ptown.sed, aes(y = pH, x = Date))+
+  geom_point(aes(group = tide_group, 
+                      color = state))+
+  ggtitle("Ptown")+ 
+  xlim(as.POSIXct(c("2022-08-13","2022-08-15")))+
+  #facet_wrap(vars(season), scales = "free", nrow = 4)+
+  #facet_rep_wrap(~month(Date)+year(Date), scales="free", nrow = 4)+
+  scale_color_viridis(discrete = TRUE, option = "D")+
+  ylim(7.4,8.4)+
+  geom_point(data = carb_dat.P, aes(x=Date, y = InSitu.pH),cex = 2, pch=22, color = "red")+
+    geom_point(data = carb_dat.P, aes(x=Date, y = pH_questionable_BW),cex = 2, pch=19, color = "red")
+```

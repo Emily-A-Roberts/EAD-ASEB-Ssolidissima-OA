@@ -1317,9 +1317,8 @@ carb_dat$season <- cut(lubridate::yday(carb_dat$Date - lubridate::days(79)),
 
 carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
 carb_dat$Arg.saturation <- carb_dat$Omega_Ar_final
-carb_dat.all <- carb_dat
-#carb_dat <- carb_dat[carb_dat$Calculation.method!="bad",]
-#carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
+carb_dat <- carb_dat[carb_dat$Calculation.method!="bad",]
+carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
 
 
 carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
@@ -1333,6 +1332,7 @@ carb_dat$InSitu.pH <- carb_dat$pH_total_scale_final
 
 # carb_dat$InSitu.pH <- carb_dat$pH_all_points
 
+carb_dat.all <- carb_dat
 
 ```
 
@@ -2166,4 +2166,8 @@ p <- ggplot(pCO2.all, aes(x=as.Date(x), y=y, group = Site, colour = Site)) +
   ylab("pCO2")#+
   #xlim(as.Date(c("2022-08-01","2023-06-15")))
 p
+```
+
+```{r}
+save.image("HOBO_pH_plots1.2.RData")
 ```

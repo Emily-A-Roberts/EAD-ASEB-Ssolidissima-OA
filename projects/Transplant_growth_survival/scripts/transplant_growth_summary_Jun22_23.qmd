@@ -1,0 +1,533 @@
+---
+title: "transplant_growth_summary_Jun22_23"
+format: html
+editor: visual
+---
+
+## Set up code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+#| label: setup1
+#| include: false
+library("ggplot2")
+library("nlme")
+library("MuMIn")
+library("dplyr")
+library("ggpubr")
+library("gridExtra")
+library(lme4)
+theme_set(theme_bw())
+
+
+  library(kableExtra)
+ library(jtools)
+ library(huxtable)
+ library(nlme)
+ library(sjPlot) # table functions
+library(sjmisc) # sample data
+#source(sjTabLinReg)
+library(lme4)
+  library(tidymodels)
+ library(kableExtra)
+library(flextable)
+ library(broom)
+ library(broom.mixed)
+
+```
+
+## Set up summer dataframe
+
+```{r}
+wd <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/"
+transplant_su <- read.csv(file = paste(wd,"June2022_Sep2022_surfclam_transplant.xlsx - data.csv",sep=""), stringsAsFactors = F)
+
+transplant_su <- transplant_su[!is.na(transplant_su$Collection.month),]
+transplant_su$Elapsed_days <- as.numeric(transplant_su$Elapsed_days)
+transplant_su$Collection1_date <- as.Date(transplant_su$Collection_date, format = "%m/%d/%Y")
+transplant_su$Site <- as.factor(transplant_su$Site)
+transplant_su$Collection.month <- factor(transplant_su$Collection.month)
+levels(transplant_su$Collection.month)[levels(transplant_su$Collection.month)=='August_transcriptomics'] <- 'August'
+
+transplant_su$Site <- factor(transplant_su$Site, levels = c("Ptown", "Eel_Pond", "Dennis"))
+levels(transplant_su$Site) <- c("Prov", "Eel Pond", "Dennis")
+transplant_su$Collection.month <- factor(transplant_su$Collection.month, levels = c("July", "August", "September"))
+levels(transplant_su$Collection.month) <- c("Jul", "Aug", "Sep")
+
+growth <- transplant_su
+
+# For growth measurements, just use animals that were alive upon collection
+
+```
+
+### Subset growth data
+
+```{r}
+growth <- growth[growth$AliveOrDead=="L",]
+growth <- growth[!is.na(growth$Collection.month),]
+
+plot(growth$Len/growth$Height, xlim = c(340,360))
+mean(growth$Len/growth$Height, na.rm = TRUE) #1.285
+growth[growth$Len/growth$Height>1.4,]
+growth[growth$Len/growth$Height<1.1,]
+plot(growth$Len/growth$Height~growth$Height)
+
+growth$Treatment <- as.factor(growth$Treatment)
+
+
+growth$AFDW <- growth$AFDW_g
+growth$DW <- as.numeric(growth$DW_g)
+
+growth$CI <- growth$AFDW/(growth$Len^3)*1000000
+
+plot(growth$CI)
+growth[growth$CI>10,]
+
+growth <- growth[growth$CI<10,]
+plot(growth$CI)
+
+
+
+(growth[!is.na(growth$Start_len_mm),])
+#growth <- growth[!is.na(growth$L_mm),]
+#growth <- growth[growth$AliveOrDead=="L",]
+
+growth$len_tot <- growth$Len-growth$Start_len_mm #len_tot is growth not final length
+growth$len_per_day <- growth$len_tot/growth$Elapsed_days
+
+growth$height_tot <- growth$Height-growth$Start_height_mm
+growth$height_per_day <- growth$height_tot/growth$Elapsed_days
+growth$ratio.LH <- growth$height_tot/growth$len_tot
+
+growth <- growth[growth$ratio.LH < 1 & growth$ratio.LH > 0,]
+
+mean(growth$len_tot, na.rm = TRUE)
+mean(growth$len_per_day, na.rm = TRUE)
+
+
+
+names(growth)[names(growth) == 'Collection.month'] <- 'Month'
+names(growth)[names(growth) == 'Treatment'] <- 'Treat'
+names(growth)[names(growth) == 'Location_code'] <- 'Enclosure'
+# growth$Treat[growth$Treat=="S"] <- "Shell"
+# growth$Treat[growth$Treat=="N"] <- "Control"
+
+growth <- growth[!is.na(growth$len_per_day),]
+growth <- growth[!is.na(growth$CI),]
+
+str(growth_summer)
+
+growth_summer <- growth
+```
+
+## Set up fall-spring dataframe
+
+All transplant data
+
+```{r}
+wd <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/"
+transplant_fall_spring <- read.csv(file = paste(wd,"2022_2023_surfclam_transplant - All.csv",sep=""), stringsAsFactors = F)
+
+transplant_fall_spring$Elapsed_days <- 
+  as.numeric(transplant_fall_spring$Elapsed_days)
+
+transplant_fall_spring$Collection1_date <- 
+  as.Date(transplant_fall_spring$Collection1_date, format = "%m/%d/%Y")
+
+transplant_fall_spring$Site <- 
+  as.factor(transplant_fall_spring$Site)
+
+transplant_fall_spring$Collection.month <- 
+  factor(transplant_fall_spring$Collection.month, levels = c("December", "April", "June"))
+
+transplant_fall_spring$Site <- factor(transplant_fall_spring$Site, levels = c("Ptown", "Eel Pond"))
+
+levels(transplant_fall_spring$Site)[levels(transplant_fall_spring$Site)=="Ptown"] <- "Provincetown"
+
+levels(transplant_fall_spring$Collection.month) <- c("Dec", "Apr", "Jun")
+
+levels(transplant_fall_spring$Treatment) <- c("Control","Shell addition")
+
+```
+
+### Subset growth data
+
+```{r}
+#| label: setup2
+
+growth <- transplant_fall_spring # Set up a new dataframe for growth analyses
+
+# For growth , just use animals that were alive upon collection
+
+# Option to not use animals that were in cages that were buried. 
+# growth <- growth[growth$Buried_Dec=="S"|is.na(growth$Buried_Dec),] Issue at Eel
+
+
+#Mark as alive or dead
+growth$AliveOrDead <- rep("Missing", nrow(growth))
+growth$AliveOrDead[is.na(growth$Tin.only)&is.na(growth$Tin...gonad...somatic.tissue)] <- "Dead"
+growth$AliveOrDead[!is.na(growth$Tin.only)|!is.na(growth$Tin...gonad...somatic.tissue)] <- "Alive"
+growth$AliveOrDead[growth$DW==0] <- "Dead"
+
+growth_aliveANDdead <- growth
+growth <- growth[growth$AliveOrDead=="Alive",]
+
+plot(growth$Len/growth$Height~growth$Height)
+mean(growth$Len/growth$Height, na.rm = TRUE) #1.285
+
+growth <- growth[!is.na(growth$Len/growth$Height),]
+growth[(growth$Len/growth$Height)<1.1,]
+growth[(growth$Len/growth$Height)>1.5,]
+
+growth <- growth[growth$Treatment!="Outside cage",]
+growth$Treatment <- as.factor(growth$Treatment)
+growth$AFDW <- growth$Corrected.AFDW.using.an.average.of.82...Used.for..20.samples.with...organic...7.which.was.identified.to.caused.by.incomplete..anoxic..muffle.furnace.issues.
+
+#growth$AFDW <- growth$AFDW_g
+#growth$DW <- as.numeric(growth$DW_g)
+growth$CI <- growth$AFDW/(growth$Len^3)*1000000
+
+(growth[!is.na(growth$Start_len_mm),])
+#growth <- growth[!is.na(growth$L_mm),]
+#growth <- growth[growth$AliveOrDead=="L",]
+
+growth$len_tot <- growth$Len-growth$Start_len_mm #len_tot is growth not final length
+growth$len_per_day <- growth$len_tot/growth$Elapsed_days
+
+growth$height_tot <- growth$Height-growth$Start_height_mm
+growth$height_per_day <- growth$height_tot/growth$Elapsed_days
+growth$ratio.LH <- growth$height_tot/growth$len_tot
+
+growth <- growth[growth$ratio.LH < 1 & growth$ratio.LH > 0,]
+
+mean(growth$len_tot, na.rm = TRUE)
+mean(growth$len_per_day, na.rm = TRUE)
+
+names(growth)[names(growth) == 'Collection.month'] <- 'Month'
+names(growth)[names(growth) == 'Treatment'] <- 'Treat'
+names(growth)[names(growth) == 'Location_code'] <- 'Enclosure'
+
+# levels(growth$Treat)[levels(growth$Treat)=="S"] <- "Shell"
+# levels(growth$Treat)[levels(growth$Treat)=="N"] <- "Control"
+
+
+growth <- growth[!is.na(growth$len_per_day),]
+growth <- growth[!is.na(growth$CI),]
+
+growth_fall_spring <- growth
+```
+
+## Mixed model analysis of growth
+
+First, consider possible model structures:
+
+```{r}
+#https://journals.sagepub.com/doi/full/10.1177/2515245920960351
+
+M1 <- lme(len_per_day*30~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_summer, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site)
+M5 <- update(M1, .~. + Treat:Month + Month:Site) #Best model
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 2.2 AIC of best model
+
+
+M1 <- lme(len_per_day*30~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_fall_spring, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site)
+M5 <- update(M1, .~. + Treat:Month + Month:Site) 
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site) #Best model
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 4 AIC of best model
+
+
+M1 <- lme(CI~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_summer, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site)
+M5 <- update(M1, .~. + Treat:Month + Month:Site) #Best model
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site)
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 4 AIC of best model
+
+
+M1 <- lme(CI~Treat+Month+Site, random = ~1|Enclosure,
+                      data = growth_fall_spring, method = "ML")
+M2 <- update(M1, .~. + Treat:Month)
+M3 <- update(M1, .~. + Treat:Site)
+M4 <- update(M1, .~. + Month:Site)
+M5 <- update(M1, .~. + Treat:Month + Month:Site) 
+M6 <- update(M1, .~. + Treat:Month + Treat:Site)
+M7 <- update(M1, .~. + Month:Site + Treat:Site) #Best model
+M8 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site)
+M9 <- update(M1, .~. + Treat:Month + Treat:Site + Month:Site + Treat:Month:Site)
+
+AICc(M1, M2, M3, M4, M5, M6, M7, M8, M9) # Full model within 3 AIC of best model
+```
+
+```{r}
+#Growth
+  mod_growth_su <- lme(len_per_day*30~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_summer)
+ 
+  mod_growth_fall_spr <- lme(len_per_day*30~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_fall_spring)
+
+#CI
+  mod_CI_su <- lme(CI~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_summer)
+
+  mod_CI_fall_spr <- lme(CI~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_fall_spring)
+#Length
+    mod_Len_su <- lme(Len~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_summer)
+ 
+  mod_Len_fall_spr <- lme(Len~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_fall_spring)
+#Tissue weight
+    mod_AFDW_su <- lme(AFDW*30~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_summer)
+ 
+  mod_AFDW_fall_spr <- lme(AFDW~Treat*Month*Site,
+                        #*Month,
+                        #+Start_len_mm+Start_len_mm:Site, 
+                        random = ~1|Enclosure, 
+                        data = growth_fall_spring)
+ 
+```
+
+```{r}
+ft1 <- as_flextable(mod_growth_su, fit = "fixed", just = "center")%>%
+  add_header_lines("Summer Growth (mm/day)")%>%
+  line_spacing(space = 1, part = "all") %>%
+  padding(padding = .51, part = "header")%>%
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+  #autofit(add_w = 0, add_h = 0)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+
+ft2 <- as_flextable(mod_growth_fall_spr, fit = "fixed", just = "center")%>%
+  add_header_lines("Fall Growth (mm/day)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+ft3 <- as_flextable(mod_CI_su, fit = "fixed", just = "center")%>%
+  add_header_lines("Summer CI (cm/mm^3)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+
+ft4 <- as_flextable(mod_CI_fall_spr, fit = "fixed", just = "center")%>%
+  add_header_lines("Fall CI (cm/mm^3)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+ft5 <- as_flextable(mod_Len_su, fit = "fixed", just = "center")%>%
+  add_header_lines("Summer length (mm)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+
+ft6 <- as_flextable(mod_Len_fall_spr, fit = "fixed", just = "center")%>%
+  add_header_lines("Fall length (mm)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+ft7 <- as_flextable(mod_AFDW_su, fit = "fixed", just = "center")%>%
+  add_header_lines("Summer AFDW (g)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+
+ft8 <- as_flextable(mod_AFDW_fall_spr, fit = "fixed", just = "center")%>%
+  add_header_lines("Fall AFDW (g)")%>%
+  line_spacing(space = 1, part = "all") %>% 
+  padding(padding = .51, part = "header")%>%
+  #autofit(add_w = 0, add_h = 0)
+  set_table_properties(ft, layout = "autofit", width = 1)%>%
+   paginate(init = TRUE, hdr_ftr = TRUE)
+
+save_as_docx(
+  "Fig S1" = ft1, 
+  "Fig S2" = ft2,   
+  "Fig S3" = ft3, 
+  "Fig S4" = ft4,   
+  "Fig S5" = ft5, 
+  "Fig S6" = ft6, 
+  "Fig S7" = ft7, 
+  "Fig S8" = ft8,
+  path = "reports.docx")
+
+# read_docx() %>% 
+#   body_add_par("A first table") %>% 
+#   body_add_flextable(value = ft1) %>% 
+#   body_add_par("A second table") %>% 
+#   body_add_flextable(value = ft2) %>% 
+#   print(target = "reports2.docx")
+```
+
+```{r}
+growth <- growth_summer
+
+growth$Site <- factor(growth$Site)
+levels(growth$Treat) <- c("Control","Shell")
+
+gg0 <- ggplot(data = growth, aes(x=as.factor(Month), y=Len, color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Length (mm)")+
+  ylim(0,60)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('A. Length')+
+  facet_wrap(facets = "Site")
+gg0
+
+gg1 <- ggplot(data = growth, aes(x=as.factor(Month), y=len_tot/(Elapsed_days/30), color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Growth (mm/month)")+
+  ylim(0,10)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('B. Growth')+
+  facet_wrap(facets = "Site")
+gg1
+
+
+gg2 <- ggplot(data = growth, aes(x=as.factor(Month), y=AFDW, color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Tissue weight (AFDW, g)")+
+  ylim(0,2)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('C. Tissue weight')+
+  facet_wrap(facets = "Site")
+
+gg2
+
+CI_label <-  expression(paste("Condition index (mg / ","cm"^3,")", sep = ""))
+gg3 <- ggplot(data = growth, aes(x=as.factor(Month), y=CI, color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab(CI_label)+
+  ylim(0,18)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('D. Condition index')+
+  facet_wrap(facets = "Site")
+
+gg3
+
+library(patchwork)
+
+(gg0 + gg1)/(gg2 + gg3) +plot_layout(guides = "collect")
+```
+
+```{r}
+growth <- growth_fall_spring
+
+growth$Site <- factor(growth$Site)
+levels(growth$Treat) <- c("Control","Shell")
+
+gg0 <- ggplot(data = growth, aes(x=as.factor(Month), y=Len, color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Length (mm)")+
+  ylim(0,60)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('A. Length')+
+  facet_wrap(facets = "Site")
+gg0
+
+gg1 <- ggplot(data = growth, aes(x=as.factor(Month), y=len_tot/(Elapsed_days/30), color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Growth (mm/month)")+
+  ylim(0,10)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('B. Growth')+
+  facet_wrap(facets = "Site")
+gg1
+
+
+gg2 <- ggplot(data = growth, aes(x=as.factor(Month), y=AFDW, color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab("Tissue weight (AFDW, g)")+
+  ylim(0,2)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('C. Tissue weight')+
+  facet_wrap(facets = "Site")
+
+gg2
+
+CI_label <-  expression(paste("Condition index (mg / ","cm"^3,")", sep = ""))
+gg3 <- ggplot(data = growth, aes(x=as.factor(Month), y=CI, color = Treat))+
+  geom_boxplot()+
+  xlab("Month") + 
+  ylab(CI_label)+
+  ylim(0,18)+
+  scale_color_discrete(name="Treatment")+
+  ggtitle ('D. Condition index')+
+  facet_wrap(facets = "Site")
+
+gg3
+
+library(patchwork)
+
+(gg0 + gg1)/(gg2 + gg3) +plot_layout(guides = "collect")
+```

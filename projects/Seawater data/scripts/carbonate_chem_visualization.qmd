@@ -334,6 +334,10 @@ theme_classic()+
 
 ```{r}
 
+```
+
+```{r}
+
 carb_dat_summer <- carb_dat.all[carb_dat.all$Date>"2022-04-01 00:00:00 EDT"&carb_dat.all$Date<"2022-09-15 00:00:00 EDT",]
 test <- carb_dat_summer[carb_dat_summer$Shell.treatment!="monitoring" |carb_dat_summer$Shell.treatment!="outside cage",] %>%
   group_by(Stratum, Date, Site) %>%
@@ -438,10 +442,156 @@ theme_classic()+
           #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
    #scale_color_manual(values=colors) +
    #guides(colour = guide_legend(override.aes = list(size=5)))+
-   ggtitle('B. pH')+
+   #ggtitle('B. pH')+
    ylab("pH")+
    facet_wrap(~ Site)
  gg1
+ 
+ gg_pH <- gg1
+```
+
+```{r}
+gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=pCO2_final, colour = Stratum))+
+   geom_point(aes(), cex = 2, pch=22)+
+    geom_line()+
+   #ylim(7.2,8.3)+
+   xlim(as.POSIXct(c("2022-09-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = pCO2_final, colour = Stratum),
+             linetype=1, cex = 2, pch=19)+ #No shell is solid line
+    geom_line(data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",])+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = pCO2_final, colour = Stratum),
+              cex = 2, pch=22)+
+    geom_line(data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = pCO2_final, colour = Stratum))+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = pCO2_final, colour = Stratum),
+              cex = 2, pch=19)+ #No shell is filled in circle
+   geom_line( data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",])+
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   #guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('B. pH')+
+   ylab("pCO2")+
+   facet_wrap(~ Site)
+ gg1
+ 
+ gg_pco2 <- gg1
+ 
+ gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=Arg.saturation, colour = Stratum))+
+   geom_point(aes(), cex = 2, pch=22)+
+    geom_line()+
+   #ylim(7.2,8.3)+
+   xlim(as.POSIXct(c("2022-09-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = Arg.saturation, colour = Stratum),
+             linetype=1, cex = 2, pch=19)+ #No shell is solid line
+    geom_line(data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",])+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = Arg.saturation, colour = Stratum),
+              cex = 2, pch=22)+
+    geom_line(data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = Arg.saturation, colour = Stratum))+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = Arg.saturation, colour = Stratum),
+              cex = 2, pch=19)+ #No shell is filled in circle
+   geom_line( data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",])+
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   #guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('B. pH')+
+   ylab(expression(paste("",Omega[Ar],sep="")))+
+   facet_wrap(~ Site)
+ gg1
+ gg_arg <- gg1
+ 
+  gg1 <- ggplot(carb_dat[carb_dat$Stratum=="2cm"&carb_dat$Shell.treatment=="Shell",], aes(x=Date, y=Alkalinity, colour = Stratum))+
+   geom_point(aes(), cex = 2, pch=22)+
+    geom_line()+
+   #ylim(7.2,8.3)+
+   xlim(as.POSIXct(c("2022-09-01 00:00:00 EDT","2023-06-15 00:00:00 EDT")))+
+theme_classic()+
+      geom_point(
+        data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = Alkalinity, colour = Stratum),
+             linetype=1, cex = 2, pch=19)+ #No shell is solid line
+    geom_line(data = carb_dat[carb_dat$Stratum=="2cm"&
+                          carb_dat$Shell.treatment=="No Shell",])+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = Alkalinity, colour = Stratum),
+              cex = 2, pch=22)+
+    geom_line(data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="Shell",],
+              aes(x=Date, y = Alkalinity, colour = Stratum))+
+   geom_point(
+     data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",],
+              aes(x=Date, y = Alkalinity, colour = Stratum),
+              cex = 2, pch=19)+ #No shell is filled in circle
+   geom_line( data = carb_dat[carb_dat$Stratum=="Bottom water"&
+                       carb_dat$Shell.treatment=="No Shell",])+
+      #geom_point(
+          #data = sampling.pH, aes(x,y), color = "black", cex = 1)+
+   #scale_color_manual(values=colors) +
+   #guides(colour = guide_legend(override.aes = list(size=5)))+
+   #ggtitle('B. pH')+
+   ylab(expression(paste("Alkalinity",sep="")))+
+   facet_wrap(~ Site)
+ gg1
+ gg_alk <- gg1
+
+```
+
+```{r}
+ ggarrange(gg_pH, gg_arg, gg_pco2, gg_alk, common.legend = TRUE, legend="bottom")
+```
+
+```{r}
+ carb_dat.LM <- carb_dat[carb_dat$Stratum!="",]
+  carb_dat.LM <- carb_dat[carb_dat$Shell.treatment!="outside cage",]
+
+
+ str(carb_dat.LM)
+ #carb_dat$Stratum <- as.factor(as.character(carb_dat$Stratum))
+ summary(lm(data = carb_dat.LM, Arg.saturation ~ Stratum * Site * Shell.treatment))
+ 
+  anova.m1 <- summary(lm(data = carb_dat.LM, InSitu.pH ~ Stratum * Site * Shell.treatment))
+  
+
+  library(kableExtra)
+  
+  kable(anova.m1$coefficients) %>%
+  kable_styling(bootstrap_options = c("striped"))
+  
+  library(Hmisc)
+  library(tidyverse)
+
 ```
 
 ```{r}
