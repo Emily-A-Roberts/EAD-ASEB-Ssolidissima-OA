@@ -587,25 +587,25 @@ df_summary <- growth %>%
 #OK a little less weird... final lengths are just set to the same as initial lengths if there was no positive growth. 
 df_summary$Lf[(df_summary$Lf-df_summary$Li)<0]<- df_summary$Li[(df_summary$Lf-df_summary$Li)<0]
 
-gg5 <- ggplot(data = df_summary, aes(x=Li, y=Lf, color = as.factor(Elapsed_days)))+
-  geom_point()+
-  xlab("Length initial (mm)") + 
-  ylab("Length final (mm)")+
-  #ylim(0,9)+
-  scale_color_discrete(name="Collection.month")+
-  ggtitle ('Initial and final averages')+
-  facet_wrap(facets = "Site")
-gg5
+# gg5 <- ggplot(data = df_summary, aes(x=Li, y=Lf, color = as.factor(Elapsed_days)))+
+#   geom_point()+
+#   xlab("Length initial (mm)") + 
+#   ylab("Length final (mm)")+
+#   #ylim(0,9)+
+#   scale_color_discrete(name="Collection.month")+
+#   ggtitle ('Initial and final averages')+
+#   facet_wrap(facets = "Site")
+# gg5
 
-gg5 <- ggplot(data = df_summary, aes(x=Li, y=Ave_growth, color = as.factor(Elapsed_days)))+
-  geom_point()+
-  xlab("Length initial (mm)") + 
-  ylab("Growth (mm)")+
-  #ylim(0,9)+
-  scale_color_discrete(name="Collection.month")+
-  ggtitle ('Initial and final averages')+
-  facet_wrap(facets = "Site")
-gg5
+# gg5 <- ggplot(data = df_summary, aes(x=Li, y=Ave_growth, color = as.factor(Elapsed_days)))+
+#   geom_point()+
+#   xlab("Length initial (mm)") + 
+#   ylab("Growth (mm)")+
+#   #ylim(0,9)+
+#   scale_color_discrete(name="Collection.month")+
+#   ggtitle ('Initial and final averages')+
+#   facet_wrap(facets = "Site")
+# gg5
 
 
 # write.csv(df_summary,file="~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/Growth.est.len.csv")

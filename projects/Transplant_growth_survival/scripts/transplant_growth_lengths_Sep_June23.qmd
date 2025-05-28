@@ -404,7 +404,6 @@ ggarrange(gg0,gg1,gg3, ncol=3, common.legend = TRUE, legend = "right")
 ggarrange(gg1,gg3, ncol=2, common.legend = TRUE, legend = "right")
 ```
 
-
 ```{r}
 gg0 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Len, color = Site))+
   geom_boxplot()+
