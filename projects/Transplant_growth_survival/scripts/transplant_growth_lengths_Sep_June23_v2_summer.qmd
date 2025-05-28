@@ -1,23 +1,17 @@
 ---
-title: "transplant_growth_lengths_Sep_June23"
-format: 
-  pdf:
-    pdf-engine: lualatex
-    default-image-extension: pdf
-    variables:
-      graphics: true
-      tables: true
+title: "transplant_growth_lengths_Sep_June23_summer"
+format: html
 editor: visual
 
 params:
-  reporting_period: "fall_spring"
-  
-
-#reporting_period <- "summer" or "fall_spring" #Run for both to get graphs for both.
+  reporting_period: "summer"
 ---
 
 ```{r}
 #| label: setup1
+#| echo: false
+#| output: false
+#| code-overflow: wrap
 
 reporting_period <- params$reporting_period
 
@@ -50,6 +44,7 @@ library(broom.mixed)
 
 ```{r}
 #| label: setup2
+#| echo: false
 
 if(reporting_period == "fall_spring"){
 
@@ -117,8 +112,8 @@ growth <- growth[!is.na(growth$CI),]
 ```{r}
 
 if(reporting_period == "summer"){
-wd <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data/"
-growth_summer <- read.csv(file = paste(wd,"June2022_Sep2022_surfclam_transplant.xlsx - data.csv",sep=""), stringsAsFactors = F)
+setwd("~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Transplant_growth_survival/data")
+growth_summer <- read.csv("June2022_Sep2022_surfclam_transplant.xlsx - data.csv", stringsAsFactors = F)
 
 growth<-growth_summer
 
@@ -175,7 +170,10 @@ growth$DW <- as.numeric(growth$DW_g)
 ##  But first, I want to check the notebook / frozen clams  --
 ##------------------------------------------------------------
 
-growth[!is.na(growth$Start_len_mm),]
+
+#growth[!is.na(growth$Start_len_mm),]
+
+
 #growth <- growth[!is.na(growth$L_mm),]
 #growth <- growth[growth$AliveOrDead=="L",]
 
@@ -199,7 +197,7 @@ Plot total change in length as a function of starting length
 
 ```{r}
 par(mfrow = c(1,1))
-plot(growth$Elapsed_days, growth$len_tot, color = growth$Site)
+plot(growth$Elapsed_days, growth$len_tot, col = growth$Site)
 plot(growth$Elapsed_days, growth$Start_len_mm)
 ```
 
@@ -220,27 +218,27 @@ library(ftExtra)
 
 #Commenting out b/c seems to be causing memory usage issues
 
-# #https://ardata-fr.github.io/flextable-book/plotting-flextable.html
-# ft <- as_flextable(mod_growth_full, fit = "fixed", just = "center")%>%
-#   add_header_lines("Growth (mm/day)")
-# ft
-# 
-# gr <- gen_grob(ft)
-# plot(gr)
-# 
-# library(patchwork)
-# 
-# ggarrange(gr,gr)
-# 
-# 
-# 
-# library(tables)
-# tab <- tabular(
-#     (Species + 1) ~ (n = 1) + Format(digits = 2) *
-#       (Sepal.Length + Sepal.Width) * (mean + sd),
-#     data = iris
-#   )
-# as_flextable(tab)
+#https://ardata-fr.github.io/flextable-book/plotting-flextable.html
+ft <- as_flextable(mod_growth_full, fit = "fixed", just = "center")%>%
+  add_header_lines("Growth (mm/day)")
+ft
+
+gr <- gen_grob(ft)
+plot(gr)
+
+library(patchwork)
+
+ggarrange(gr,gr)
+
+
+
+library(tables)
+tab <- tabular(
+    (Species + 1) ~ (n = 1) + Format(digits = 2) *
+      (Sepal.Length + Sepal.Width) * (mean + sd),
+    data = iris
+  )
+as_flextable(tab)
 ```
 
 ```{r}
@@ -403,7 +401,6 @@ ggarrange(gg0,gg1,gg3, ncol=3, common.legend = TRUE, legend = "right")
 ```{r}
 ggarrange(gg1,gg3, ncol=2, common.legend = TRUE, legend = "right")
 ```
-
 
 ```{r}
 gg0 <- ggplot(data = growth, aes(x=as.factor(Collection.month), y=Len, color = Site))+
