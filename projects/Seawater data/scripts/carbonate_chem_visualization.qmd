@@ -10,6 +10,9 @@ editor: visual
 library(ggplot2)
 library(ggpubr)
 library(dplyr)
+library(kableExtra)
+library(Hmisc)
+library(tidyverse)
 
 ```
 
@@ -23,7 +26,7 @@ dir_data <- "~/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbo
 
 #carb_dat <- read.csv(paste(dir_data,"Surfclam_carbonate_data_corrected.csv", sep = ""), stringsAsFactors = FALSE)
 
-carb_dat <- read.csv(paste(dir_data,"Surfclam_transplant_carbonate_data_flagged.xlsx - Transplant_site_data.csv", sep = ""), stringsAsFactors = FALSE)
+carb_dat <- read.csv("~/Documents/GitHub/EAD-ASEB-Ssolidissima-OA/projects/Seawater data/data/Carbonate chem/Surfclam_transplant_carbonate_data_flagged.xlsx - Transplant_site_data.csv", stringsAsFactors = FALSE)
 
 #str(carb_dat)
 carb_dat$Date <- as.POSIXct(carb_dat$Date, format = "%m/%d/%Y")
@@ -32,6 +35,12 @@ carb_dat$Site[carb_dat$Site == "Eel Pond"] <- "Eel"
 carb_dat$Site[carb_dat$Site == "Provincetown"] <- "Ptown"
 carb_dat$Site[carb_dat$Site == "East Dennis (aquaculture)"] <- "Den"
 carb_dat$Site[carb_dat$Site == "East Dennis"] <- "Den"
+
+carb_dat$Experiment <- NA
+
+carb_dat[carb_dat$Date<="2022-08-30 EDT","Experiment"] <- "Experiment 1"
+carb_dat[carb_dat$Date>"2022-08-30 EDT","Experiment"] <- "Experiment 2"
+
 
 carb_dat$Site <- as.factor(carb_dat$Site)
 carb_dat <- carb_dat[carb_dat$Stratum!= "2cm control",] #Only include animal cages
@@ -73,6 +82,125 @@ carb_dat <- carb_dat[carb_dat$Calculation.method!="questionable",]
 carb_dat <- carb_dat[!is.na(carb_dat$InSitu.pH),]
 
 carb_dat.all <- carb_dat
+```
+
+```{r}
+carb_dat.LM <- carb_dat[carb_dat$Stratum!="",]
+  carb_dat.LM <- carb_dat[carb_dat$Shell.treatment!="outside cage",]
+
+carb_dat.exp1 <- carb_dat.LM[carb_dat.LM$Experiment=="Experiment 1",]
+carb_dat.exp2 <- carb_dat.LM[carb_dat.LM$Experiment=="Experiment 2",]
+
+  
+ # str(carb_dat.LM)
+ #carb_dat$Stratum <- as.factor(as.character(carb_dat$Stratum))
+ # summary(lm(data = carb_dat.exp1, Arg.saturation ~ Stratum * Site * Shell.treatment))
+ 
+    anova.m1 <- summary(lm(data = carb_dat.exp1, InSitu.pH ~ Stratum * Site * Shell.treatment))
+  
+    anova.m2 <- summary(lm(data = carb_dat.exp2, InSitu.pH ~ Stratum * Site * Shell.treatment))
+    
+    anova.m1 <- summary(lm(data = carb_dat.exp1, InSitu.pH ~ Stratum * Site * Shell.treatment))
+  
+    anova.m2 <- summary(lm(data = carb_dat.exp2, InSitu.pH ~ Stratum * Site * Shell.treatment))
+  
+
+  
+  kable(anova.m1$coefficients) %>%
+  kable_styling(bootstrap_options = c("striped"))
+  
+  kable(anova.m2$coefficients) %>%
+  kable_styling(bootstrap_options = c("striped"))
+  
+carb_dat.LM|>
+  group_by(Experiment, Stratum, Site, Shell.treatment) |>
+  summarise(Mean = mean(InSitu.pH),
+            Median = median(InSitu.pH),
+            St_Dev = sd(InSitu.pH),
+            Max = max(InSitu.pH),
+            Min = min(InSitu.pH),
+            Count = length(InSitu.pH))
+
+carb_dat.LM|>
+  group_by(Experiment, Stratum, Site, Shell.treatment) |>
+  summarise(Mean = -log(mean(10^(-InSitu.pH)),base=10),
+            Median = -log(median(10^(-InSitu.pH)),base=10),
+            St_Dev = -log(sd(10^(-InSitu.pH)),base=10),
+            Max = -log(max(10^(-InSitu.pH)),base=10),
+            Min = -log(min(10^(-InSitu.pH)),base=10),
+            Count = length(InSitu.pH))
+
+carb_dat.LM|>
+  group_by(Experiment, Stratum, Site) |>
+  summarise(Mean = -log(mean(10^(-InSitu.pH)),base=10),
+            Median = -log(median(10^(-InSitu.pH)),base=10),
+            St_Dev = -log(sd(10^(-InSitu.pH)),base=10),
+            Max = -log(max(10^(-InSitu.pH)),base=10),
+            Min = -log(min(10^(-InSitu.pH)),base=10),
+            Count = length(InSitu.pH))
+
+carb_dat.LM$Omega_Ar..DIC.Alk.
+
+carb_dat.LM|>
+  group_by(Experiment, Stratum, Site, Shell.treatment) |>
+  summarise(Mean = mean(Alkalinity),
+            Median = median(Alkalinity),
+            St_Dev = sd(Alkalinity),
+            Max = max(Alkalinity),
+            Min = min(Alkalinity),
+            Count = length(Alkalinity))
+
+carb_dat.LM|>
+  group_by(Experiment, Stratum, Site, Shell.treatment) |>
+  summarise(Mean = mean(Salinity),
+            Median = median(Salinity),
+            St_Dev = sd(Salinity),
+            Max = max(Salinity),
+            Min = min(Salinity),
+            Count = length(Salinity))
+
+carb_dat.LM|>
+  group_by(Experiment, Stratum, Site, Shell.treatment) |>
+  summarise(Mean = mean(Omega_Ar..DIC.Alk.),
+            Median = median(Omega_Ar..DIC.Alk.),
+            St_Dev = sd(Omega_Ar..DIC.Alk.),
+            Max = max(Omega_Ar..DIC.Alk.),
+            Min = min(Omega_Ar..DIC.Alk.),
+            Count = length(Omega_Ar..DIC.Alk.))
+
+```
+
+```{r}
+dat1 <- carb_dat.LM|>
+  group_by(Experiment, Stratum, Site, Shell.treatment, Date) |>
+  summarise(Mean = mean(InSitu.pH))
+
+wide <- dat1 %>%
+  pivot_wider(
+    names_from = Shell.treatment,
+    names_sep = ".",
+    values_from = Mean
+  )
+
+wide$diff <- wide$Shell-wide$`No Shell`
+w.1 <- wide[wide$Experiment=="Experiment 1",]
+w.2 <- wide[wide$Experiment=="Experiment 2",]
+w.1
+
+(anova.diff <- summary(lm(data = w.1, diff ~ Stratum * Site)))
+(anova.diff <- summary(lm(data = w.2, diff ~ Stratum * Site)))
+
+
+ggplot(w.1, aes(x=Date,y = diff,colour = Stratum))+
+  geom_point()
+
+ggplot(w.1, aes(x=Site,y = diff, colour = Stratum))+
+  geom_boxplot()
+ggplot(w.2, aes(x=Site,y = diff, colour = Stratum))+
+  geom_boxplot()
+
+#Next -- check assumptions of ANOVA.... 
+
 ```
 
 Plot carbonate chem data
@@ -581,7 +709,7 @@ theme_classic()+
  #carb_dat$Stratum <- as.factor(as.character(carb_dat$Stratum))
  summary(lm(data = carb_dat.LM, Arg.saturation ~ Stratum * Site * Shell.treatment))
  
-  anova.m1 <- summary(lm(data = carb_dat.LM, InSitu.pH ~ Stratum * Site * Shell.treatment))
+  anova.m1 <- summary(lm(data = carb_dat.LM, InSitu.pH ~ Stratum * Site * Shell.treatment + Experiment))
   
 
   library(kableExtra)
